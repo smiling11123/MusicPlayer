@@ -16,17 +16,7 @@
         </button>
       </div>
 
-      <!-- 圆点指示器 -->
-      <div class="dots">
-        <button
-          v-for="(p, i) in pageCount"
-          :key="i"
-          class="dot"
-          :class="{ active: i === currentPage }"
-          @click="goto(i)"
-          aria-label="第 {{ i + 1 }} 页"
-        />
-      </div>
+      
     </div>
 
     <div class="viewport">
@@ -162,7 +152,7 @@ async function play(item: Item) {
 
     // 把标准化的 id 列表加入播放器
     store.addWholePlaylist(ids)
-
+    
     // 取第一首，先获取可播放 url
     const firstId = ids[0]
     console.log('First track id to play:', firstId)
@@ -176,6 +166,7 @@ async function play(item: Item) {
   } catch (err) {
     console.error('play failed:', err)
   }
+  store.loadPlaylistData()
 }
 </script>
 

@@ -1,6 +1,14 @@
 import { MusicUrl, GetMusicDetail } from '@/api/GetMusic'
 import { defineStore } from 'pinia'
-
+import { ref } from 'vue'
+export interface Song {
+  id: number
+  name: string
+  album: string
+  artist: string
+  duration: number
+  cover: string
+}
 export const Player = defineStore('Player', {
   state: () => ({
     audio: new Audio(), // 音频对象
@@ -8,10 +16,16 @@ export const Player = defineStore('Player', {
     playlist: [], // 播放列表
     currentSong: null, // 当前播放的歌曲
     currentSongDetial: {
+      id: null,
       name: null,
       artist: null,
       cover: null,
+      duration: null,
+      album: null,
     }, // 当前播放歌曲的详细信息
+    
+    currentSongList: [] as Song[],
+      
   }),
   getters: {
     currentSongIndex: (state) => state.playlist.findIndex((item) => item === state.currentSong), // 获取当前播放歌曲索引
@@ -47,6 +61,40 @@ export const Player = defineStore('Player', {
       this.setupAudioListener() // 设置音频监听器
       this.audio.load()
       this.audio.play() // 播放音频
+    },
+    async loadPlaylistData() {
+      try {
+        const songIds = this.playlist // 假设是 number[]
+        if (songIds.length === 0) {
+          this.currentSongList = []
+          return
+        }
+        const results = await Promise.all(
+          songIds.map((id) =>
+            GetMusicDetail({ ids: id }) // 单个请求
+              .then((res) => res) // 提取数据
+              .catch((err) => {
+                console.error(`歌曲 ${id} 加载失败:`, err)
+                return null // 失败时返回null
+              }),
+          ),
+        )
+        this.currentSongList = results
+          .filter(Boolean) // 移除null
+          .map((song) => ({
+            id: song.songs[0].id,
+            name: song.songs[0].name,
+            album: song.songs[0].al?.name || '未知专辑',
+            artist: song.songs[0].ar?.map((a) => a.name).join('/') || '未知艺术家',
+            duration: song.songs[0].dt ? Math.floor(song.songs[0].dt / 1000) : 0,
+            cover: song.songs[0].al?.picUrl || '',
+          }))
+        console.log(this.currentSongList)
+      } catch (error) {
+        console.error('加载歌曲失败:', error)
+      } finally {
+        
+      }
     },
     End() {
       this.playNextSong() // 播放下一首歌曲

@@ -143,16 +143,8 @@ import { useRoute } from 'vue-router'
 import { Player } from '@/stores/index'
 import { NButton, NList, NListItem } from 'naive-ui'
 import { GetMusicFromList } from '@/api/GetMusicFromList'
+import { Song } from '@/stores/index'
 
-// 接口定义
-interface Song {
-  id: number
-  name: string
-  album: string
-  artist: string
-  duration: number
-  cover: string
-}
 
 interface Playlist {
   id: number
