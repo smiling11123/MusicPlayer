@@ -45,7 +45,7 @@
           class="progress"
           type="range"
           min="0"
-          :max="Math.max(1, duration)"
+          :max="Math.max(store.currentSongTime || 1, duration)"
           step="0.1"
           v-model.number="seekValue"
           @change="onSeek"
@@ -105,15 +105,17 @@ onMounted(() => {
   if (!audio) return
   // 同步初始值
   store.isplaying = false
-  volume.value = audio.volume ?? 1
-  duration.value = audio.duration || 0
-  currentTime.value = audio.currentTime || 0
+  volume.value = store.audiovolume ?? 1
+  duration.value = store.currentSongDetial.duration || 0
+  currentTime.value = store.currentSongTime || 0
   seekValue.value = currentTime.value
-
+  console.log(seekValue.value)
+  console.log(currentTime.value)
   audio.addEventListener('timeupdate', () => {
     if (!seeking.value) {
       currentTime.value = audio.currentTime || 0
       seekValue.value = currentTime.value
+      store.currentSongTime = currentTime.value
     }
   })
   audio.addEventListener('durationchange', () => {
@@ -157,6 +159,7 @@ function onSeek() {
   if (!audio) return
   audio.currentTime = seekValue.value
   currentTime.value = seekValue.value
+  store.currentSongTime = seekValue.value
 }
 
 function onVolume() {

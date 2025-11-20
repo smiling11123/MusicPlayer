@@ -65,23 +65,17 @@
   </div>
   <!-- ✅ 遮罩层（全局，在播放列表和歌词页面之下） -->
   <transition name="fade">
-    <div
-      v-show="pagecontroler.ShowLyric"
-      class="global-overlay"
-      @click="closeOverlays"
-    ></div>
+    <div v-show="pagecontroler.ShowLyric" class="global-overlay" @click="closeOverlays"></div>
   </transition>
 
   <!-- ✅ 歌词页面（全屏覆盖，从底部滑出） -->
   <transition name="slide-up">
-    <div v-show="pagecontroler.ShowLyric" class="lyric-page">
-      <Lyric/>
-    </div>
+    <div v-show="pagecontroler.ShowLyric" class="lyric-page"></div>
   </transition>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { NSplit } from 'naive-ui'
 import { pagecontrol } from '@/stores/page'
@@ -93,6 +87,7 @@ const Homepage = defineAsyncComponent(() => import('@/components/homepage.vue'))
 const ToLogin = defineAsyncComponent(() => import('./components/ToLogin.vue'))
 const PlayList = defineAsyncComponent(() => import('@/components/playlist.vue'))
 const Lyric = defineAsyncComponent(() => import('@/components/lyric.vue'))
+import { CheckLoginStatus } from './api/Login'
 const pagecontroler = pagecontrol()
 const route = useRoute()
 const cachedComponents = ref([
@@ -102,6 +97,19 @@ const cachedComponents = ref([
   'banner',
   'NewMusicList',
 ])
+const code = ref(0)
+onMounted(async () => {
+  //登录状态验证
+ const result = await CheckLoginStatus()
+
+  code.value = result.data.code
+  console.log(code.value)
+  if (code.value === 200) {
+    pagecontroler.IsLogin = true
+  } else {
+    pagecontroler.IsLogin = false
+  }
+})
 
 const debounce = (fn, delay = 100) => {
   let timer = null
@@ -250,7 +258,7 @@ const onPaneResize = debounce(() => {
 /* 遮罩层（全局覆盖） */
 .global-overlay {
   position: fixed;
-  top: 50px;    /* 避开 Topbar */
+  top: 50px; /* 避开 Topbar */
   left: 0;
   right: 0;
   bottom: 65px; /* 避开 TouchBar */

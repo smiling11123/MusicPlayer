@@ -31,7 +31,8 @@ export const Player = defineStore(
     const isplaying = ref(false) // 播放状态
     const playlist = ref<number[]>([]) // 播放列表
     const currentSong = ref<number | null>(null) // 当前播放的歌曲
-    const currentSongUrl = ref<String | null>(null)
+    const currentSongUrl = ref<String | null>(null) //上次播放位置
+    const currentSongTime = ref<number>(0)
     const useCookie = ref<String | null>(null)
     const currentSongDetial = ref({
       id: null,
@@ -52,10 +53,12 @@ export const Player = defineStore(
     const setupAudioListener = () => {
       // 移除旧的监听器（防止重复添加）
       audio.removeEventListener('ended', End.bind(this))
-
       // 添加新监听器
       audio.addEventListener('ended', End.bind(this))
-
+      audio.addEventListener('playtimeupdate', () => {
+        currentSongTime.value = audio.currentTime
+        //localStorage.setItem('currentSongTime', currentSongTime.value.toString())
+      })
       // 监听错误
       audio.addEventListener('error', (e) => {
         console.error('音频加载错误:', e)
@@ -64,9 +67,13 @@ export const Player = defineStore(
     }
     const play = async () => {
       if(currentSong.value && isplaying.value === false){
-        audio.src = await MusicUrl({ id: currentSong.value})
+        isplaying.value = true
+        const urls = await MusicUrl({ id: currentSong.value})
+        const url = urls[0].url
+        audio.src = url
         setupAudioListener()
         audio.load()
+        audio.currentTime = currentSongTime.value
         audio.play()
       }
       
@@ -153,7 +160,7 @@ export const Player = defineStore(
       } else {
         // 如果 currentSong 没有 url，store.playNextSong / store.playcurrentSong 应负责拉取 url
         if (!audio.src) {
-          playcurrentSong(currentSong.value)
+          play()
           return
         }
         audio
@@ -196,6 +203,7 @@ export const Player = defineStore(
       useCookie,
       currentSongList,
       currentSongIndex,
+      currentSongTime,
       playcurrentSong,
       loadPlaylistData,
       addSongToPlaylist,
@@ -210,7 +218,7 @@ export const Player = defineStore(
     persist: {
       key: 'Player',
       storage: localStorage,
-      paths: ['playlist', 'currentSongList', 'currentSong', 'currentSongDetail', 'currentSongUrl', 'audiovolume'],
+      paths: ['playlist', 'currentSongList', 'currentSong', 'currentSongDetail', 'currentSongUrl', 'audiovolume', 'currentSongTime'],
     } as any,
   },
 )
