@@ -2,10 +2,11 @@
     <div class="main">
         <p>歌词</p>
     </div>
+    <LyricPlayer/>
 </template>
 
-<script>
-
+<script setup>
+import { LyricPlayer } from "@applemusic-like-lyrics/vue";
 
 </script>
 

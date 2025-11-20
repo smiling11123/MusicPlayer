@@ -5,7 +5,7 @@ export const pagecontrol = defineStore('pagecontrol', {
         ShowLyric: false, //是否显示歌词页面
         ShowPlayList: false,
         ShowAdditionRight: false,
-        IsLogin: false,
+        //IsLogin: false,
         ShowQRCode: false,
 
     }),

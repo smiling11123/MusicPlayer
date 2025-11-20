@@ -20,10 +20,10 @@
           <Homepage />
         </div>
         <n-message-provider>
-        <div class="scroll-pane To-login" v-if="!pagecontroler.IsLogin" key="tologin">
-          <ToLogin />
-        </div>
-      </n-message-provider>
+          <div class="scroll-pane To-login" v-if="!pagecontroler.IsLogin" key="tologin">
+            <ToLogin />
+          </div>
+        </n-message-provider>
       </template>
 
       <!-- Pane 2: 中间主内容（保持比例） -->
@@ -51,8 +51,8 @@
 
     <!-- 遮罩层 -->
     <transition name="fade">
-      <div 
-        v-show="pagecontroler.ShowPlayList" 
+      <div
+        v-show="pagecontroler.ShowPlayList"
         class="playlist-overlay"
         @click="pagecontroler.ShowPlayList = false"
       ></div>
@@ -63,6 +63,21 @@
   <div class="TouchBar">
     <Touchbar />
   </div>
+  <!-- ✅ 遮罩层（全局，在播放列表和歌词页面之下） -->
+  <transition name="fade">
+    <div
+      v-show="pagecontroler.ShowLyric"
+      class="global-overlay"
+      @click="closeOverlays"
+    ></div>
+  </transition>
+
+  <!-- ✅ 歌词页面（全屏覆盖，从底部滑出） -->
+  <transition name="slide-up">
+    <div v-show="pagecontroler.ShowLyric" class="lyric-page">
+      <Lyric/>
+    </div>
+  </transition>
 </template>
 
 <script setup>
@@ -77,10 +92,16 @@ const Touchbar = defineAsyncComponent(() => import('./components/touchbar.vue'))
 const Homepage = defineAsyncComponent(() => import('@/components/homepage.vue'))
 const ToLogin = defineAsyncComponent(() => import('./components/ToLogin.vue'))
 const PlayList = defineAsyncComponent(() => import('@/components/playlist.vue'))
-
+const Lyric = defineAsyncComponent(() => import('@/components/lyric.vue'))
 const pagecontroler = pagecontrol()
 const route = useRoute()
-const cachedComponents = ref(['Musichub', 'Lricypage','HighQualityMusicList', 'banner', 'NewMusicList'])
+const cachedComponents = ref([
+  'Musichub',
+  'Lricypage',
+  'HighQualityMusicList',
+  'banner',
+  'NewMusicList',
+])
 
 const debounce = (fn, delay = 100) => {
   let timer = null
@@ -165,11 +186,11 @@ const onPaneResize = debounce(() => {
 /* ===== 抽屉式播放列表 ===== */
 .playlist-drawer {
   position: fixed;
-  top:0;
+  top: 0;
   right: 0;
   bottom: 0px;
   width: 360px; /* 固定宽度 */
-  
+
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
   z-index: 999;
   contain: layout style paint;
@@ -205,7 +226,6 @@ const onPaneResize = debounce(() => {
 
 /* 遮罩层 */
 
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -222,9 +242,56 @@ const onPaneResize = debounce(() => {
     width: 100%; /* 移动端全屏 */
     max-width: 420px;
   }
-  
+
   .center-content.playlist-open {
     padding-right: 0; /* 移动端不推挤内容 */
   }
+}
+/* 遮罩层（全局覆盖） */
+.global-overlay {
+  position: fixed;
+  top: 50px;    /* 避开 Topbar */
+  left: 0;
+  right: 0;
+  bottom: 65px; /* 避开 TouchBar */
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1800; /* 在播放列表之下 */
+  backdrop-filter: blur(4px);
+}
+
+/* ✅ 歌词页面 - 全屏覆盖 */
+.lyric-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000000;
+  z-index: 2000; /* ✅ 最高层级，覆盖所有内容 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* 从底部滑入动画 */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-up-enter-from {
+  transform: translateY(100%);
+}
+
+.slide-up-enter-to {
+  transform: translateY(0);
+}
+
+.slide-up-leave-from {
+  transform: translateY(0);
+}
+
+.slide-up-leave-to {
+  transform: translateY(100%);
 }
 </style>

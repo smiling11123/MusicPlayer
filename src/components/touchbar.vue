@@ -94,7 +94,6 @@ import { pagecontrol } from '@/stores/page'
 const store = Player()
 const pagecontroler = pagecontrol()
 const audio = store.audio // 复用 store 中的 Audio 实例
-
 const currentTime = ref(0)
 const duration = ref(0)
 const seekValue = ref(0)
@@ -105,6 +104,7 @@ const prevVolume = ref(volume.value)
 onMounted(() => {
   if (!audio) return
   // 同步初始值
+  store.isplaying = false
   volume.value = audio.volume ?? 1
   duration.value = audio.duration || 0
   currentTime.value = audio.currentTime || 0
@@ -131,7 +131,8 @@ onMounted(() => {
 })
 
 watch(volume, (v) => {
-  if (audio) audio.volume = v
+  store.audiovolume = v
+  if (audio) audio.volume = store.audiovolume
 })
 function ShowLyric() {
   pagecontroler.isShowLyric()

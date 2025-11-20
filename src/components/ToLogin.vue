@@ -156,6 +156,7 @@ import type { FormInst, FormRules } from 'naive-ui'
 import { request } from '@/api/request'
 import type { AxiosResponse } from 'axios'
 import { CheckLoginStatus } from '@/api/Login'
+import { GetUserDetail, GetUserSubcount } from '@/api/useInfo'
 
 // 定义接口类型（保持原有）
 interface QRKeyResponse {
@@ -396,10 +397,16 @@ const handleCookieLogin = async () => {
       // 3. 保存Cookie
       localStorage.setItem('neteaseCookie', cookie)
       const status = await CheckLoginStatus()
+      const usersubcount = await GetUserSubcount()
+      console.log(usersubcount)
       console.log(status)
       // 4. 保存用户信息
       if (status.data.profile) {
         localStorage.setItem('userProfile', JSON.stringify(status.data.profile))
+        console.log(status.data.profile.userId)
+        const userDetail = await GetUserDetail(status.data.profile.userId)
+        localStorage.setItem('userDetail', JSON.stringify(userDetail))
+        console.log(userDetail)
       }
       
       successMsg.value = `登录成功！欢迎 ${testRes.data.profile?.nickname || '用户'}`
