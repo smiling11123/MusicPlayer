@@ -164,7 +164,7 @@ const playlist = ref<Playlist>({
 
 const songs = ref<Song[]>([])
 
-const currentSongId = computed(() => playerStore.currentSong?.id)
+const currentSongId = computed(() => playerStore.currentSong || null)
 
 // 路由参数处理
 const MusicListId = computed(() => {
@@ -192,7 +192,7 @@ async function loadPlaylistData() {
       id: playlistData.id,
       name: playlistData.name,
       coverImgUrl: playlistData.coverImgUrl,
-      description: playlistData.description,
+      description: playlistData.description || "暂无简介",
       playCount: playlistData.playCount,
       trackCount: playlistData.trackCount,
       creator: playlistData.creator,

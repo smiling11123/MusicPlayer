@@ -70,7 +70,9 @@
 
   <!-- ✅ 歌词页面（全屏覆盖，从底部滑出） -->
   <transition name="slide-up">
-    <div v-show="pagecontroler.ShowLyric" class="lyric-page"></div>
+    <div v-show="pagecontroler.ShowLyric" class="lyric-page">
+      <Lyric></Lyric>
+    </div>
   </transition>
 </template>
 
@@ -81,18 +83,18 @@ import { NSplit } from 'naive-ui'
 import { pagecontrol } from '@/stores/page'
 import { defineAsyncComponent } from 'vue'
 import Login from '@/components/Login.vue'
-const Topbar = defineAsyncComponent(() => import('@/components/topbar.vue'))
-const Touchbar = defineAsyncComponent(() => import('./components/touchbar.vue'))
-const Homepage = defineAsyncComponent(() => import('@/components/homepage.vue'))
+const Topbar = defineAsyncComponent(() => import('@/components/TopBar.vue'))
+const Touchbar = defineAsyncComponent(() => import('./components/TouchBar.vue'))
+const Homepage = defineAsyncComponent(() => import('@/components/HomePage.vue'))
 const ToLogin = defineAsyncComponent(() => import('./components/ToLogin.vue'))
-const PlayList = defineAsyncComponent(() => import('@/components/playlist.vue'))
-const Lyric = defineAsyncComponent(() => import('@/components/lyric.vue'))
+const PlayList = defineAsyncComponent(() => import('@/components/PlayList.vue'))
+const Lyric = defineAsyncComponent(() => import('@/components/Lyric.vue'))
 import { CheckLoginStatus } from './api/Login'
 const pagecontroler = pagecontrol()
 const route = useRoute()
 const cachedComponents = ref([
   'Musichub',
-  'Lricypage',
+  'Lricy',
   'HighQualityMusicList',
   'banner',
   'NewMusicList',
@@ -100,12 +102,16 @@ const cachedComponents = ref([
 const code = ref(0)
 onMounted(async () => {
   //登录状态验证
- const result = await CheckLoginStatus()
+  if (localStorage.getItem('neteaseCookie')) {
+    const result = await CheckLoginStatus()
 
-  code.value = result.data.code
-  console.log(code.value)
-  if (code.value === 200) {
-    pagecontroler.IsLogin = true
+    code.value = result.data.code
+    console.log(code.value)
+    if (code.value === 200) {
+      pagecontroler.IsLogin = true
+    } else {
+      pagecontroler.IsLogin = false
+    }
   } else {
     pagecontroler.IsLogin = false
   }

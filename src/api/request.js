@@ -1,3 +1,4 @@
+import { timestamp } from '@vueuse/core'
 import axios from 'axios'
 
 export const request = axios.create({
@@ -7,10 +8,12 @@ export const request = axios.create({
 })
 
 export const withCookie = (params = {}) => {
+  const cacheBuster = Date.now
   const cookie = localStorage.getItem('neteaseCookie')
   return {
     ...params,
     // ✅ 通过 params 传递（NeteaseCloudMusicApi 支持）
+    //timestamp: cacheBuster, //添加时间戳
     cookie: cookie || undefined
   }
 }

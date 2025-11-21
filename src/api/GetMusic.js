@@ -30,6 +30,6 @@ export const GetMusicUrls = async (params) => {
 export const GetMusicLyric = async (params) => {
   return request({
     url: '/lyric',
-    params,
+    params: {id: params},
   }).then((res) => res.data)
 }

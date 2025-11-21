@@ -1,9 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-contextBridge.exposeInMainWorld('versions', {
-  node: () => process.versions.node,
-  chrome: () => process.versions.chrome,
-  electron: () => process.versions.electron,
-  ping: () => ipcRenderer.invoke('ping')
-  // 除函数之外，我们也可以暴露变量
+contextBridge.exposeInMainWorld('electronAPI', {
+  minimize: () => ipcRenderer.invoke('window-minimize'),
+  toggleMaximize: () => ipcRenderer.invoke('window-toggle-maximize'),
+  close: () => ipcRenderer.invoke('window-close'),
+  isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
 })

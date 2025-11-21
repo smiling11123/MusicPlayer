@@ -1,4 +1,4 @@
-import { MusicUrl, GetMusicDetail } from '@/api/GetMusic'
+import { MusicUrl, GetMusicDetail, GetMusicLyric } from '@/api/GetMusic'
 import { defineStore } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ComputedRef, ref } from 'vue'
@@ -29,10 +29,14 @@ export const Player = defineStore(
     const audiovolume = ref<number>(null)
     //audio.volume = audiovolume
     const isplaying = ref(false) // 播放状态
+    const playnormal = ref(true)
+    const playFM = ref(false)
     const playlist = ref<number[]>([]) // 播放列表
     const currentSong = ref<number | null>(null) // 当前播放的歌曲
     const currentSongUrl = ref<String | null>(null) //上次播放位置
     const currentSongTime = ref<number>(0)
+    const currentSongLyric = ref<String>(null)
+    const currentSongTLyric = ref<String>(null)
     const useCookie = ref<String | null>(null)
     const currentSongDetial = ref({
       id: null,
@@ -44,7 +48,7 @@ export const Player = defineStore(
     }) // 当前播放歌曲的详细信息
 
     const currentSongList = ref<Song[]>([])
-    
+
     const currentSongIndex: ComputedRef<number> = computed(() => {
       if (currentSong.value === null) return -1
       return playlist.value.findIndex((songId) => songId === currentSong.value)
@@ -55,10 +59,6 @@ export const Player = defineStore(
       audio.removeEventListener('ended', End.bind(this))
       // 添加新监听器
       audio.addEventListener('ended', End.bind(this))
-      audio.addEventListener('playtimeupdate', () => {
-        currentSongTime.value = audio.currentTime
-        //localStorage.setItem('currentSongTime', currentSongTime.value.toString())
-      })
       // 监听错误
       audio.addEventListener('error', (e) => {
         console.error('音频加载错误:', e)
@@ -66,9 +66,9 @@ export const Player = defineStore(
       })
     }
     const play = async () => {
-      if(currentSong.value && isplaying.value === false){
+      if (currentSong.value && isplaying.value === false) {
         isplaying.value = true
-        const urls = await MusicUrl({ id: currentSong.value})
+        const urls = await MusicUrl({ id: currentSong.value })
         const url = urls[0].url
         audio.src = url
         setupAudioListener()
@@ -76,7 +76,6 @@ export const Player = defineStore(
         audio.currentTime = currentSongTime.value
         audio.play()
       }
-      
     }
     const playcurrentSong = async (input) => {
       const id = input.firstId || input
@@ -84,8 +83,12 @@ export const Player = defineStore(
       isplaying.value = true // 设置播放状态为 true
       const urls = await MusicUrl({ id: id }) // 获取歌曲 URL
       const data = await GetMusicDetail({ ids: id }) // 获取歌曲详细信息
+      const lyric = await GetMusicLyric(id)
       const detail = data.songs[0] // 设置当前歌曲详细信息
       currentSongUrl.value = urls[0].url
+      currentSongLyric.value = lyric.lrc?.lyric
+      currentSongTLyric.value = lyric.tlyric?.lyric || null
+      
       currentSongDetial.value = {
         id: detail.id,
         name: detail.name,
@@ -96,6 +99,7 @@ export const Player = defineStore(
       }
       currentSong.value = id
       audio.src = urls[0].url // 设置音频源
+      currentSongTime.value = audio.currentTime
       setupAudioListener() // 设置音频监听器
       audio.load()
       audio.play() // 播放音频
@@ -136,11 +140,28 @@ export const Player = defineStore(
     const End = () => {
       playNextSong() // 播放下一首歌曲
     }
-    const addSongToPlaylist = (song) => {
-      playlist.value.push(song) // 添加歌曲到播放列表
+    const addSongToPlaylist = async (songid, next) => {
+      if (playlist.value.includes(songid)) {
+        return
+      }
+      playlist.value.splice(next, 0, songid) // 添加歌曲到播放列表
+      console.log(playlist.value)
+      console.log(songid)
+      console.log(currentSongIndex.value)
+      const res = await GetMusicDetail({ ids: songid })
+      const song = res.songs[0]
+      currentSongList.value.splice(next, 0, {
+        id: song.id,
+        name: song.name,
+        album: song.al?.name || '未知专辑',
+        artist: song.ar?.map((a) => a.name).join('/') || '未知艺术家',
+        duration: song.dt ? Math.floor(song.dt / 1000) : 0,
+        cover: song.al?.picUrl || '',
+      })
     }
     const addWholePlaylist = (songs) => {
       playlist.value = songs // 替换整个播放列表
+      loadPlaylistData()
     }
     const removeSongFromPlaylist = (songId) => {
       const wasPlaying = currentSong.value === songId // 检查是否是当前播放的歌曲
@@ -193,13 +214,88 @@ export const Player = defineStore(
       const song = playlist.value[prevIndex]
       playcurrentSong(song)
     }
+    const addSongsToPlaylist = async (
+      songIds: number[],
+      options: {
+        startIndex?: number // 开始插入的位置（默认为末尾）
+        skipDuplicates?: boolean // 是否跳过已存在的歌曲（默认 true）
+      } = {},
+    ) => {
+      const { startIndex, skipDuplicates = true } = options
+
+      // 过滤掉已存在的歌曲（去重）
+      const filteredIds = skipDuplicates
+        ? songIds.filter((id) => !playlist.value.includes(id))
+        : songIds
+
+      if (filteredIds.length === 0) {
+        console.warn('所有歌曲都已存在于播放列表中')
+        return
+      }
+
+      // 确定插入位置（越界时自动调整为末尾）
+      const insertIndex =
+        startIndex === undefined || startIndex < 0 || startIndex > playlist.value.length
+          ? playlist.value.length
+          : startIndex
+
+      // 批量插入到 playlist
+      playlist.value.splice(insertIndex, 0, ...filteredIds)
+
+      // 批量获取歌曲详情（并行请求，性能更好）
+      try {
+        const results = await Promise.all(
+          filteredIds.map((id) =>
+            GetMusicDetail({ ids: id }).catch((err) => {
+              console.error(`歌曲 ${id} 加载失败:`, err)
+              return null // 失败时返回 null
+            }),
+          ),
+        )
+
+        // 过滤成功的结果并转换为 Song 对象
+        const validSongs = results
+          .filter((res): res is NonNullable<typeof res> => Boolean(res?.songs?.[0]))
+          .map((res) => {
+            const song = res.songs[0]
+            return {
+              id: song.id,
+              name: song.name,
+              album: song.al?.name || '未知专辑',
+              artist: song.ar?.map((a) => a.name).join('/') || '未知艺术家',
+              duration: song.dt ? Math.floor(song.dt / 1000) : 0,
+              cover: song.al?.picUrl || '',
+            } as Song
+          })
+
+        // 批量插入到 currentSongList（保持同步）
+        currentSongList.value.splice(insertIndex, 0, ...validSongs)
+
+        // 如果有失败的歌曲，从 playlist 中移除
+        if (validSongs.length < filteredIds.length) {
+          const failedIds = filteredIds.filter((id) => !validSongs.some((song) => song.id === id))
+          playlist.value = playlist.value.filter((id) => !failedIds.includes(id))
+          console.warn(`部分歌曲添加失败，已跳过:`, failedIds)
+        }
+
+        console.log(`成功添加 ${validSongs.length} 首歌曲`)
+      } catch (error) {
+        console.error('批量添加歌曲失败:', error)
+        // 发生错误时回滚：移除刚才添加的所有歌曲
+        playlist.value.splice(insertIndex, filteredIds.length)
+      }
+    }
     return {
       audio,
       audiovolume,
       isplaying,
+      playnormal,
+      playFM,
       playlist,
       currentSong,
       currentSongDetial,
+      currentSongLyric,
+      currentSongTLyric,
       useCookie,
       currentSongList,
       currentSongIndex,
@@ -212,13 +308,24 @@ export const Player = defineStore(
       togglePlay,
       playNextSong,
       playPrevSong,
+      addSongsToPlaylist,
     }
   },
   {
     persist: {
       key: 'Player',
       storage: localStorage,
-      paths: ['playlist', 'currentSongList', 'currentSong', 'currentSongDetail', 'currentSongUrl', 'audiovolume', 'currentSongTime'],
+      paths: [
+        'playlist',
+        'currentSongList',
+        'currentSong',
+        'currentSongDetail',
+        'currentSongUrl',
+        'audiovolume',
+        'currentSongTime',
+        'currentSongLyric',
+        'currentSongTLyric',
+      ],
     } as any,
   },
 )

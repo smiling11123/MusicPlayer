@@ -1,21 +1,15 @@
 <template>
-    <div class="Tittle">
-        <button class="NewTittle">新歌单></button>
-    </div>
-  <div class="hq-wrap">
-    <!-- 修改 controls：绝对定位 + 箭头按钮 -->
-    <div class="controls">
-      <div class="nav-arrows">
-        <button class="ctrl prev" @click="prev" :disabled="currentPage === 0" aria-label="上一页">
-          ‹
+  <div class="hq-container">
+    
+    <div class="header-row">
+      <h2 class="section-title">最新歌单</h2>
+      
+      <div class="nav-controls" v-if="pageCount > 1">
+        <button class="ctrl-btn prev" @click="prev" :disabled="currentPage === 0" aria-label="上一页">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
         </button>
-        <button
-          class="ctrl next"
-          @click="next"
-          :disabled="currentPage === pageCount - 1"
-          aria-label="下一页"
-        >
-          ›
+        <button class="ctrl-btn next" @click="next" :disabled="currentPage === pageCount - 1" aria-label="下一页">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </button>
       </div>
     </div>
@@ -23,12 +17,17 @@
     <div class="viewport">
       <div class="slides" :style="{ transform: `translateX(-${currentPage * 100}%)` }">
         <div v-for="(page, pi) in pages" :key="pi" class="slide">
-          <div v-for="(item, idx) in page" :key="idx" class="hq-item">
-            <div class="hq-card" @click="TurnIn(item) /*做一个页面跳转 */">
-              <img :src="item.image" alt="" class="hq-img" />
-              <div class="hq-badge" v-if="!pagecontroler.ShowPlayList">{{ item.badgeText ?? '每日推荐' }}</div>
-              <button class="play-btn" @click.stop="play(item)" aria-label="play">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden>
+          
+          <div v-for="(item, idx) in page" :key="item.id" class="hq-item">
+            <div class="hq-card" @click="TurnIn(item)">
+              <img :src="item.image" alt="" class="hq-img" loading="lazy" />
+              
+              <div class="hq-badge" v-if="!pagecontroler.ShowPlayList">
+                {{ item.badgeText || '每日推荐' }}
+              </div>
+              
+              <button class="play-btn" @click.stop="play(item)">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </button>
@@ -36,31 +35,32 @@
 
             <div class="meta">
               <div class="meta-title">{{ item.title }}</div>
-              <div class="meta-sub">{{ item.subtitle ?? '' }}</div>
-            </div>
+              </div>
           </div>
-          <!-- 如果某页不足 itemsPerPage，用占位填充保持布局 -->
+
           <div
-            v-for="n in Math.max(0, itemsPerPage - page.length)"
+            v-for="n in (itemsPerPage - page.length)"
             :key="'ph-' + n"
             class="hq-item placeholder"
-            aria-hidden="true"
           />
         </div>
       </div>
     </div>
   </div>
 </template>
+
 <script setup lang="ts">
-import { GetMusicFromList, MusicIdList } from '@/api/GetMusicFromList'
-import { ref, onMounted, computed } from 'vue'
-import { NewMusicList } from '@/api/GetMusicList'
-import { MusicUrl } from '@/api/GetMusic'
+import { ref, onMounted, onUnmounted, computed, watchEffect } from 'vue'
+import { GetRecommendList, NewMusicList } from '@/api/GetMusicList' // 确保路径正确
+import { MusicIdList } from '@/api/GetMusicFromList'
 import { Player } from '@/stores/index'
-import { M } from 'motion-v/es'
 import { useRouter } from 'vue-router'
 import { pagecontrol } from '@/stores/page'
+
 const router = useRouter()
+const store = Player()
+const pagecontroler = pagecontrol()
+
 interface Item {
   image: string
   title: string
@@ -68,61 +68,89 @@ interface Item {
   badgeText?: string
   id: number
 }
-const store = Player()
-const items = ref<Item[]>([])
-const pagecontroler = pagecontrol()
-// 布局配置：两行 * cols 每页
-const rows = 1
-const cols = 6
-const itemsPerPage = rows * cols
 
+const items = ref<Item[]>([])
 const currentPage = ref(0)
 
-onMounted(async () => {
+// --- 响应式布局核心逻辑 ---
+const windowWidth = ref(window.innerWidth)
+const currentCols = ref(5) // 默认大屏显示5列
+
+// 根据屏幕宽度计算每页显示的个数
+const updateColumns = () => {
+  windowWidth.value = window.innerWidth
+  if (windowWidth.value > 1400) {
+    currentCols.value = 5
+  } else if (windowWidth.value > 1100) {
+    currentCols.value = 4
+  } else if (windowWidth.value > 768) {
+    currentCols.value = 3
+  } else {
+    currentCols.value = 2
+  }
+}
+
+// 监听 resize
+onMounted(() => {
+  window.addEventListener('resize', updateColumns)
+  updateColumns() // 初始化执行一次
+  fetchData()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateColumns)
+})
+
+// 计算属性：每页数量 = 行数(1) * 动态列数
+const itemsPerPage = computed(() => currentCols.value * 1)
+
+// 当列数发生变化时（比如缩放窗口），重置到第一页，防止页码溢出
+watchEffect(() => {
+  if (currentCols.value) {
+    // 可选：重置页码，或者重新计算当前页码使其对应当前的item
+    // currentPage.value = 0 
+  }
+})
+
+// 数据获取
+const fetchData = async () => {
   try {
     const res = await NewMusicList()
-    items.value = (res || []).map((MusicList: any) => ({
-      image: MusicList.coverImgUrl,
-      title: MusicList.name,
-      subtitle: (MusicList.artists || []).map((a: any) => a.name).join('、'),
-      badgeText: MusicList.tags || '每日推荐',
-      id: MusicList.id,
+    items.value = (res || []).map((m: any) => ({
+      image: m.coverImgUrl,
+      title: m.name,
+      subtitle: m.copywriter, // 网易云推荐语通常在 copywriter
+      badgeText: m.tags,
+      id: m.id,
     }))
   } catch (err) {
-    console.error('MusicList failed:', err)
-    items.value = []
+    console.error(err)
   }
+}
+
+// 分页计算
+const pages = computed(() => {
+  const result: Item[][] = []
+  // 必须要保证 items.value 存在
+  if (!items.value.length) return []
+  
+  for (let i = 0; i < items.value.length; i += itemsPerPage.value) {
+    result.push(items.value.slice(i, i + itemsPerPage.value))
+  }
+  return result
 })
 
-// 把 items 切分为 pages
-const pages = computed(() => {
-  const out: Item[][] = []
-  for (let i = 0; i < items.value.length; i += itemsPerPage) {
-    out.push(items.value.slice(i, i + itemsPerPage))
-  }
-  if (out.length === 0) out.push([]) // 最少一个空页
-  return out
-})
 const pageCount = computed(() => pages.value.length)
 
-function prev() {
-  if (currentPage.value > 0) currentPage.value--
+// 翻页逻辑
+const prev = () => { if (currentPage.value > 0) currentPage.value-- }
+const next = () => { if (currentPage.value < pageCount.value - 1) currentPage.value++ }
+
+// 跳转详情
+const TurnIn = (item: Item) => {
+  router.push({ name: 'musiclist', params: { id: item.id } })
 }
-function next() {
-  if (currentPage.value < pageCount.value - 1) currentPage.value++
-}
-function goto(i: number) {
-  currentPage.value = i
-}
-function TurnIn(item: Item) {
-  console.log(item.id)
-  router.push({
-    name: 'musiclist',
-    params: { id: item.id },
-  })
-  // 做一个页面跳转
-  console.log('跳转到推荐页面')
-}
+
 async function play(item: Item) {
   try {
     if (!item?.id) {
@@ -167,250 +195,209 @@ async function play(item: Item) {
   } catch (err) {
     console.error('play failed:', err)
   }
-  store.loadPlaylistData()
 }
 </script>
 
-<style scoped>
-.Tittle {
-  user-select: none;
-  display: flex;
-  .moreList{
-  }
-}
-.NewTittle {
-  font-size: 28px;
-  color: #fff;
-  margin-left: 30px;
-}
-.hq-wrap {
+<style scoped lang="scss">
+/* 核心布局变量 */
+$container-max-width: 1200px; // 与 For You 保持一致
+$card-gap: 20px; // 卡片间距
+
+.hq-container {
   width: 100%;
+  max-width: $container-max-width;
+  margin: 0 auto; // 居中
+  padding: 20px 0; // 上下内边距
+  position: relative;
   box-sizing: border-box;
-  position: relative;
-
-  &:hover .nav-arrows .ctrl {
-    opacity: 1;
-  }
-}
-
-.controls {
   user-select: none;
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
-  height: 0;
-  z-index: 10;
 }
 
-.nav-arrows {
-  position: relative;
-  width: 100%;
-  height: 100%;
+/* 头部样式：标题与按钮对齐 */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end; // 底部对齐
+  margin-bottom: 16px;
+  padding: 0 4px; // 微调对齐
 }
 
-.ctrl {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.6);
+.section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.nav-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.ctrl-btn {
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   color: #fff;
-  font-size: 24px;
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity 0.3s ease,
-    background 0.2s ease,
-    transform 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.8);
-    transform: translateY(-50%) scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
   }
-
-  &:active:not(:disabled) {
-    transform: translateY(-50%) scale(0.95);
+  &:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
-.ctrl.prev {
-  left: 12px;
-}
-
-.ctrl.next {
-  right: 12px;
-}
-
-.ctrl:disabled {
-  opacity: 0.1 !important;
-  cursor: default;
-}
-
-/* 重要：去掉外层水平 padding，避免出现“peek” */
+/* 视口与滑动区域 */
 .viewport {
-  overflow: hidden;
   width: 100%;
-  padding: 0; /* 改为 0，所有间距改由内部元素处理 */
+  overflow: hidden;
+  // border-radius: 12px; // 可选：防止滚动时边缘溢出
 }
 
-/* slides 作为整行容器，不留额外间隙 */
 .slides {
   display: flex;
-  transition: transform 300ms ease;
   width: 100%;
-  box-sizing: border-box;
-  gap: 0; /* 去掉 gap，避免影响滑动对齐 */
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); // 更顺滑的动画
 }
 
-/* 每个 slide 必须占满可视宽度，不能被 max-width 居中缩窄导致右边露出下一页 */
 .slide {
-  user-select: none;
-  flex: 0 0 100%;
-  min-width: 100%;
+  flex: 0 0 100%; // 每一页占满 100%
   width: 100%;
-  box-sizing: border-box;
-  padding: 8px 12px; /* 内部间距，外面不再有 padding */
   display: grid;
-  grid-template-columns: repeat(var(--cols), minmax(90px, 1fr));
-  gap: 14px;
-  align-items: start;
-  justify-items: center;
-  --cols: 6;
-  max-width: none; /* 取消 max-width，确保占满宽度 */
-  margin: 0; /* 取消居中 */
+  /* 核心修改：使用 JS 计算的 cols，配合 css grid 实现整齐排列 */
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: $card-gap;
+  box-sizing: border-box;
 }
 
-/* 保持卡片尺寸控制，但不影响 slide 占满宽度 */
 .hq-item {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 260px;
-}
-.hq-item.placeholder {
-  visibility: hidden;
+  /* 占位符样式 */
+  &.placeholder {
+    pointer-events: none;
+    visibility: hidden;
+  }
 }
 
-/* 卡片视觉调整保持不变 */
+/* 卡片样式 */
 .hq-card {
   width: 100%;
-  aspect-ratio: 4 / 3.2;
+  aspect-ratio: 1 / 1; // 推荐歌单通常是正方形
   position: relative;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  background: #111;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  background: #1a1a1a;
   cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
-}
-.hq-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    .play-btn {
+      opacity: 1;
+      transform: translate(0, 0);
+    }
+  }
 }
 
 .hq-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
 .hq-badge {
   position: absolute;
-  left: 8px;
-  bottom: 10px;
-  background: #00e0d0;
-  color: #002322;
-  font-weight: 700;
-  padding: 5px 8px;
+  top: 8px;
+  right: 8px; // 标签改到右上角更符合现代审美，也可放回原位
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  padding: 4px 8px;
   border-radius: 6px;
   font-size: 11px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  font-weight: 600;
 }
 
+/* 播放按钮：右下角浮现 */
 .play-btn {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  border: none;
-  background: #00d27f;
+  bottom: 12px;
+  right: 12px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
-  display: inline-flex;
+  border: none;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-  transition: transform 0.12s ease;
-  opacity: 0;
-  transform: scale(0.95);
-  transition:
-    opacity 0.3s ease,
-    transform 0.15s ease;
-}
-.hq-card:hover .play-btn {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.play-btn:active {
-  transform: scale(0.98);
-}
-.play-btn:hover {
-  transform: scale(1.05);
-}
-.play-btn:active {
-  transform: scale(0.98);
+  opacity: 0; // 默认隐藏
+  transform: translate(0, 10px); // 默认向下偏移一点
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  
+  &:hover {
+    transform: scale(1.1) !important;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  &:active {
+    transform: scale(0.95) !important;
+  }
 }
 
 .meta {
-  width: 100%;
-  margin-top: 8px;
-  text-align: left;
-  padding: 0 4px;
-  box-sizing: border-box;
-}
-.meta-title {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.meta-sub {
-  margin-top: 4px;
-  color: #9aa0a6;
-  font-size: 12px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 12px;
 }
 
-@media (max-width: 1100px) {
-  .slide {
-    --cols: 2;
-    grid-template-columns: repeat(var(--cols), minmax(160px, 1fr)); /* 缩小最小宽度 */
-    /* 不再设置 max-width，确保 slide 占满视口 */
-  }
+.meta-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.4;
+  // 限制两行显示
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-@media (max-width: 700px) {
-  .slide {
-    --cols: 2;
-    grid-template-columns: repeat(2, minmax(120px, 1fr)); /* 缩小最小宽度 */
-    /* 不再设置 max-width，确保 slide 占满视口 */
-  }
+
+/* 响应式媒体查询：这里主要控制 Grid 的列数显示效果 */
+/* JS 已经处理了 itemsPerPage，CSS 只需要配合 */
+
+/* 大屏 */
+@media (min-width: 1401px) {
+  .slide { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* 中屏 */
+@media (max-width: 1400px) and (min-width: 1101px) {
+  .slide { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* 平板 */
+@media (max-width: 1100px) and (min-width: 769px) {
+  .slide { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* 手机 */
+@media (max-width: 768px) {
+  .slide { grid-template-columns: repeat(2, 1fr); }
+  
+  // 手机端隐藏左右切换按钮，或者改小
+  .ctrl-btn { width: 28px; height: 28px; }
 }
 </style>

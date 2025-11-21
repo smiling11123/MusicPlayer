@@ -157,6 +157,7 @@ import { request } from '@/api/request'
 import type { AxiosResponse } from 'axios'
 import { CheckLoginStatus } from '@/api/Login'
 import { GetUserDetail, GetUserSubcount } from '@/api/useInfo'
+import { pagecontrol } from '@/stores/page'
 
 // 定义接口类型（保持原有）
 interface QRKeyResponse {
@@ -205,7 +206,7 @@ interface UserAccountResponse {
 const router = useRouter()
 const message = useMessage()
 const activeTab = ref<'qr' | 'phone' | 'cookie'>('qr')
-
+const pagecontroler = pagecontrol()
 // 二维码登录状态（保持原有）
 const qrImg = ref<string>('')
 const qrKey = ref<string>('')
@@ -395,6 +396,7 @@ const handleCookieLogin = async () => {
     
     if (testRes.data.code === 200) {
       // 3. 保存Cookie
+      pagecontroler.IsLogin = true
       localStorage.setItem('neteaseCookie', cookie)
       const status = await CheckLoginStatus()
       const usersubcount = await GetUserSubcount()

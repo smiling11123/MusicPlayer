@@ -1,26 +1,39 @@
 const { app, BrowserWindow, ipcMain } = require('electron/main')
 const path = require('node:path')
-
+let mainWindow = null 
 const createWindow = () => {
-  const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+  mainWindow = new BrowserWindow({
+    width: 1500,
+    height: 900,
     frame: false,
+    transparent: false,
+    titleBarStyle: 'hidden',
     webPreferences: {
       preload: path.join(__dirname, 'electron', 'preload.js'),
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,
     },
     //titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#000000',
-      symbolColor: '#ffffff',
-      height: 40
-    }
     // Remove native title bar/overlay so CSS drag regions work on Windows
   })
 
-  win.loadURL(/*('https://www.bilibili.com/')*/ 'http://localhost:5173/')
+  mainWindow.loadURL('http://localhost:5173/')
+  // 为当前窗口注册控制 IPC（使用 invoke）
+  ipcMain.handle('window-minimize', () => {
+    if (mainWindow) mainWindow.minimize()
+  })
+  ipcMain.handle('window-toggle-maximize', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMaximized()) mainWindow.unmaximize()
+    else mainWindow.maximize()
+    return mainWindow.isMaximized()
+  })
+  ipcMain.handle('window-close', () => {
+    if (mainWindow) mainWindow.close()
+  })
+  ipcMain.handle('window-is-maximized', () => {
+    return mainWindow ? mainWindow.isMaximized() : false
+  })
 }
 
 app.whenReady().then(() => {

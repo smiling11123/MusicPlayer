@@ -2,7 +2,7 @@
   <div class="hq-container">
     
     <div class="header-row">
-      <h2 class="section-title">精选歌单</h2>
+      <h2 class="section-title">推荐歌单</h2>
       
       <div class="nav-controls" v-if="pageCount > 1">
         <button class="ctrl-btn prev" @click="prev" :disabled="currentPage === 0" aria-label="上一页">
@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watchEffect } from 'vue'
-import { GetRecommendList, HighQualityMusicList } from '@/api/GetMusicList' // 确保路径正确
+import { GetRecommendList } from '@/api/GetMusicList' // 确保路径正确
 import { MusicIdList } from '@/api/GetMusicFromList'
 import { Player } from '@/stores/index'
 import { useRouter } from 'vue-router'
@@ -115,9 +115,9 @@ watchEffect(() => {
 // 数据获取
 const fetchData = async () => {
   try {
-    const res = await HighQualityMusicList()
-    items.value = (res || []).map((m: any) => ({
-      image: m.coverImgUrl,
+    const res = await GetRecommendList()
+    items.value = (res.result || []).map((m: any) => ({
+      image: m.picUrl,
       title: m.name,
       subtitle: m.copywriter, // 网易云推荐语通常在 copywriter
       badgeText: m.tag,
