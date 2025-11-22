@@ -2,7 +2,7 @@
   <div class="hq-container">
     
     <div class="header-row">
-      <h2 class="section-title">最新歌单</h2>
+      <h2 class="section-title">艺人</h2>
       
       <div class="nav-controls" v-if="pageCount > 1">
         <button class="ctrl-btn prev" @click="prev" :disabled="currentPage === 0" aria-label="上一页">
@@ -21,21 +21,10 @@
           <div v-for="(item, idx) in page" :key="item.id" class="hq-item">
             <div class="hq-card" @click="TurnIn(item)">
               <img :src="item.image" alt="" class="hq-img" loading="lazy" />
-              
-              <div class="hq-badge" v-if="!pagecontroler.ShowPlayList">
-                {{ item.badgeText || '每日推荐' }}
-              </div>
-              
-              <button class="play-btn" @click.stop="play(item)">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </button>
             </div>
-
-            <div class="meta">
-              <div class="meta-title">{{ item.title }}</div>
-              </div>
+            <div class="artist-name">
+              <span>{{ item.name }}</span>
+            </div>
           </div>
 
           <div
@@ -50,22 +39,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watchEffect } from 'vue'
-import { GetRecommendList, NewMusicList } from '@/api/GetMusicList' // 确保路径正确
+import { ref, onMounted, onUnmounted, computed, watchEffect, watch } from 'vue'
+import { GetRecommendList } from '@/api/GetMusicList' // 确保路径正确
 import { MusicIdList } from '@/api/GetMusicFromList'
 import { Player } from '@/stores/index'
 import { useRouter } from 'vue-router'
 import { pagecontrol } from '@/stores/page'
-
+import { GetSearchData } from '@/api/Search'
+import { search } from '@/stores/search'
 const router = useRouter()
 const store = Player()
 const pagecontroler = pagecontrol()
-
+const searcher = search()
 interface Item {
   image: string
-  title: string
-  subtitle?: string
-  badgeText?: string
+  name: string
   id: number
 }
 
@@ -74,7 +62,7 @@ const currentPage = ref(0)
 
 // --- 响应式布局核心逻辑 ---
 const windowWidth = ref(window.innerWidth)
-const currentCols = ref(5) // 默认大屏显示5列
+const currentCols = ref(3) // 默认大屏显示5列
 
 // 根据屏幕宽度计算每页显示的个数
 const updateColumns = () => {
@@ -89,16 +77,32 @@ const updateColumns = () => {
     currentCols.value = 2
   }
 }
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => searcher.keyword,
+  (newKeyword) => {
+    if (typeof newKeyword !== 'string') return
 
+    // 清除上一次未执行的定时器
+    if (debounceTimer) clearTimeout(debounceTimer)
+
+    // 设置防抖，避免用户打字时频繁请求 (300ms 延迟)
+    debounceTimer = setTimeout(() => {
+      fetchData(newKeyword)
+    }, 300)
+  },
+  { immediate: true } // 立即执行一次以处理组件挂载时的初始值
+)
 // 监听 resize
 onMounted(() => {
   window.addEventListener('resize', updateColumns)
   updateColumns() // 初始化执行一次
-  fetchData()
+  fetchData(searcher.keyword)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateColumns)
+  if (debounceTimer) clearTimeout(debounceTimer)
 })
 
 // 计算属性：每页数量 = 行数(1) * 动态列数
@@ -113,14 +117,12 @@ watchEffect(() => {
 })
 
 // 数据获取
-const fetchData = async () => {
+const fetchData = async (Keyword) => {
   try {
-    const res = await NewMusicList()
-    items.value = (res || []).map((m: any) => ({
-      image: m.coverImgUrl,
-      title: m.name,
-      subtitle: m.copywriter, // 网易云推荐语通常在 copywriter
-      badgeText: m.tags,
+    const res = await GetSearchData({keyword: Keyword, type: 100, limit: 10})
+    items.value = (res.result.artists || []).map((m: any) => ({
+      image: m.picUrl,
+      name: m.name,
       id: m.id,
     }))
   } catch (err) {
@@ -271,6 +273,7 @@ $card-gap: 20px; // 卡片间距
   padding-top: 4px;
   display: flex;
   width: 100%;
+  
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); // 更顺滑的动画
 }
 
@@ -278,6 +281,7 @@ $card-gap: 20px; // 卡片间距
   flex: 0 0 100%; // 每一页占满 100%
   width: 100%;
   display: grid;
+  
   /* 核心修改：使用 JS 计算的 cols，配合 css grid 实现整齐排列 */
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: $card-gap;
@@ -285,7 +289,7 @@ $card-gap: 20px; // 卡片间距
 }
 
 .hq-item {
-  width: 100%;
+  width: 80%;
   /* 占位符样式 */
   &.placeholder {
     pointer-events: none;
@@ -298,7 +302,7 @@ $card-gap: 20px; // 卡片间距
   width: 100%;
   aspect-ratio: 1 / 1; // 推荐歌单通常是正方形
   position: relative;
-  border-radius: 12px;
+  border-radius: 50%;
   overflow: hidden;
   background: #1a1a1a;
   cursor: pointer;
@@ -332,31 +336,17 @@ $card-gap: 20px; // 卡片间距
   font-weight: 600;
 }
 
-/* 播放按钮：右下角浮现 */
-.play-btn {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0; // 默认隐藏
-  transform: translate(0, 10px); // 默认向下偏移一点
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  
-  &:hover {
-    transform: scale(1.1) !important;
-    background: rgba(255, 255, 255, 0.2);
-  }
-  &:active {
-    transform: scale(0.95) !important;
+.artist-name {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding-top: 10px;
+  justify-self: center;
+  span {
+    cursor: pointer;
+    &:hover {
+      color: #fff;
+    }
   }
 }
 

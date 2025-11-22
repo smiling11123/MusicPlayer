@@ -1,4 +1,4 @@
-import { request } from "@playwright/test"
+import { request } from "./request"
 
 //获取热门歌手
 export const HotArtist = async (params) => {

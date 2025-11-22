@@ -268,6 +268,7 @@ $card-gap: 20px; // 卡片间距
 }
 
 .slides {
+  padding-top: 4px;
   display: flex;
   width: 100%;
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); // 更顺滑的动画

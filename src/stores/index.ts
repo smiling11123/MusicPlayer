@@ -2,6 +2,7 @@ import { MusicUrl, GetMusicDetail, GetMusicLyric } from '@/api/GetMusic'
 import { defineStore } from 'pinia'
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ComputedRef, ref } from 'vue'
+import { GetPersonalFM } from '@/api/GetMusicList'
 export interface Song {
   id: number
   name: string
@@ -88,7 +89,7 @@ export const Player = defineStore(
       currentSongUrl.value = urls[0].url
       currentSongLyric.value = lyric.lrc?.lyric
       currentSongTLyric.value = lyric.tlyric?.lyric || null
-      
+
       currentSongDetial.value = {
         id: detail.id,
         name: detail.name,
@@ -137,7 +138,43 @@ export const Player = defineStore(
       } finally {
       }
     }
-    const End = () => {
+    const End = async () => {
+      if (playFM) {
+        const mappedFmSongs = ref()
+        if (currentSongIndex.value - currentSongList.value.length <= 3) {
+          const fmRes = await GetPersonalFM()
+          console.log(fmRes)
+          const fmList = fmRes.data
+          mappedFmSongs.value = fmList.map((song: any) => ({
+            id: song.id,
+            name: song.name,
+            album: song.album?.name,
+            artist: song.artists?.[0]?.name,
+            duration: Math.floor(song.duration / 1000),
+            cover: song.album?.picUrl,
+          }))
+          const idRes: any = mappedFmSongs.value
+          console.log('MusicIdList response:', idRes)
+
+          // 从响应中提取 id 列表（根据你的后端结构调整）
+          let ids: number[] = []
+          if (Array.isArray(idRes)) {
+            ids = idRes.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (Array.isArray(idRes?.ids)) {
+            ids = idRes.ids.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (Array.isArray(idRes?.data)) {
+            ids = idRes.data.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (idRes?.id) {
+            ids = [idRes.id]
+          }
+
+          if (!ids.length) {
+            console.error('No track ids returned from MusicIdList', idRes)
+            return
+          }
+          addSongsToPlaylist(ids)
+        }
+      }
       playNextSong() // 播放下一首歌曲
     }
     const addSongToPlaylist = async (songid, next) => {

@@ -88,7 +88,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Player } from '@/stores/index'
 import { pagecontrol } from '@/stores/page'
-
+import { GetPersonalFM } from '@/api/GetMusicList'
 const store = Player()
 const pagecontroler = pagecontrol()
 const audio = store.audio
@@ -156,8 +156,50 @@ function muteToggle() {
 function prev() {
   if (store.playlist?.length) store.playPrevSong ? store.playPrevSong() : store.playNextSong()
 }
-function next() {
-  store.playNextSong && store.playNextSong()
+const next = async () => {
+  //store.playNextSong && store.playNextSong()
+  store.playNextSong()
+  //const nextdata = GetNextPersonalFM()
+  //console.log(nextdata)
+  console.log(store.currentSongList.length)
+  console.log(store.playlist.length)
+  const mappedFmSongs = ref()
+  if(store.playFM){
+  if (store.currentSongIndex - store.currentSongList.length <= 3) {
+    const fmRes = await GetPersonalFM()
+    console.log(fmRes)
+    const fmList = fmRes.data
+    mappedFmSongs.value = fmList.map((song: any) => ({
+      id: song.id,
+      name: song.name,
+      album: song.album?.name,
+      artist: song.artists?.[0]?.name,
+      duration: Math.floor(song.duration / 1000),
+      cover: song.album?.picUrl,
+    }))
+    const idRes: any = mappedFmSongs.value
+    console.log('MusicIdList response:', idRes)
+
+    // 从响应中提取 id 列表（根据你的后端结构调整）
+    let ids: number[] = []
+    if (Array.isArray(idRes)) {
+      ids = idRes.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+    } else if (Array.isArray(idRes?.ids)) {
+      ids = idRes.ids.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+    } else if (Array.isArray(idRes?.data)) {
+      ids = idRes.data.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+    } else if (idRes?.id) {
+      ids = [idRes.id]
+    }
+
+    if (!ids.length) {
+      console.error('No track ids returned from MusicIdList', idRes)
+      return
+    }
+    store.addSongsToPlaylist(ids)
+  }
+}
+  console.log('FM下一首')
 }
 </script>
 

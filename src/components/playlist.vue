@@ -93,10 +93,10 @@ $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   :deep(.n-list-item) {
     background-color: transparent !important;
   }
-
   &::-webkit-scrollbar { width: 0; height: 0; }
   scrollbar-width: none;
   -ms-overflow-style: none;
+  
 }
 
 .song-list {
@@ -255,7 +255,7 @@ $transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         max-width: 100%;
       }
     }
-
+    
     // 专辑
     .song-album {
       color: $text-secondary;

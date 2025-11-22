@@ -1,8 +1,9 @@
 import Homepage from '@/components/HomePage.vue'
-import Artist from '@/components/Artist.vue'
+import Artist from '@/components/RecommendArtist.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import MusicList from '@/components/MusicList.vue'
 import Musichub from '@/components/MusicHub.vue'
+import SearchResult from '@/components/SearchResult.vue'
 
 const routes = [
   {
@@ -20,6 +21,11 @@ const routes = [
     name: 'musiclist',
     component: MusicList,
   },
+  {
+    path: '/SearchResult',
+    name: 'searchresult',
+    component: SearchResult,
+  }
 ]
 
 const router = createRouter({

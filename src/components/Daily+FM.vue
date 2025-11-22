@@ -230,6 +230,7 @@ const togglePlay = () => {
     player.playnormal = false
     player.playFM = true
     playFM()
+    player.isplaying = true
   } else {
     player.togglePlay()
   }
@@ -241,7 +242,7 @@ const handleNext = async () => {
   //console.log(nextdata)
   console.log(player.currentSongList.length)
   console.log(player.playlist.length)
-  if (player.currentSongList.length <= 3) {
+  if (player.currentSongIndex - player.currentSongList.length <= 3) {
     const fmRes = await GetPersonalFM()
     console.log(fmRes)
     const fmList = fmRes.data

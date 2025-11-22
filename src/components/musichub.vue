@@ -12,26 +12,23 @@
   <div>
     <HighQualityMusicList></HighQualityMusicList>
   </div>
-  
+
   <div>
     <NewMusicList></NewMusicList>
   </div>
 
   <div>
-    <ArtistList></ArtistList>
+    <RecommendArtist></RecommendArtist>
   </div>
 </template>
 
 <script setup lang="ts">
-import ArtistList from './ArtistList.vue';
-import Banner from './Banner.vue'
-import DailyFM from './Daily+FM.vue';
+import DailyFM from './Daily+FM.vue'
 import HighQualityMusicList from './HighQualityMusicList.vue'
-import NewMusicList from './NewMusicList.vue';
-import NewSongs from './NewSongs.vue';
-import RecommendList from './RecommendList.vue';
+import NewMusicList from './NewMusicList.vue'
+import NewSongs from './NewSongs.vue'
+import RecommendList from './RecommendList.vue'
+import RecommendArtist from './RecommendArtist.vue'
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

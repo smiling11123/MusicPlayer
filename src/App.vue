@@ -99,6 +99,7 @@ const cachedComponents = ref([
   'HighQualityMusicList',
   'banner',
   'NewMusicList',
+  'SearchResult',
 ])
 const code = ref(0)
 onMounted(async () => {

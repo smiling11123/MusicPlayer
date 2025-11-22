@@ -33,3 +33,10 @@ export const GetMusicLyric = async (params) => {
     params: {id: params},
   }).then((res) => res.data)
 }
+
+export const GetMusicPicUrl = async (params) => {
+  return request({
+    url: '/song/detail',
+    params,
+  }).then((res) => res.data.songs[0].al.picUrl)
+}

@@ -2,7 +2,7 @@
   <div class="hq-container">
     
     <div class="header-row">
-      <h2 class="section-title">最新歌单</h2>
+      <h2 class="section-title">专辑</h2>
       
       <div class="nav-controls" v-if="pageCount > 1">
         <button class="ctrl-btn prev" @click="prev" :disabled="currentPage === 0" aria-label="上一页">
@@ -20,12 +20,7 @@
           
           <div v-for="(item, idx) in page" :key="item.id" class="hq-item">
             <div class="hq-card" @click="TurnIn(item)">
-              <img :src="item.image" alt="" class="hq-img" loading="lazy" />
-              
-              <div class="hq-badge" v-if="!pagecontroler.ShowPlayList">
-                {{ item.badgeText || '每日推荐' }}
-              </div>
-              
+              <img :src="item.image" alt="" class="hq-img" loading="lazy" />  
               <button class="play-btn" @click.stop="play(item)">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                   <path d="M8 5v14l11-7z" />
@@ -50,13 +45,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watchEffect } from 'vue'
-import { GetRecommendList, NewMusicList } from '@/api/GetMusicList' // 确保路径正确
+import { ref, onMounted, onUnmounted, computed, watchEffect, watch } from 'vue'
+import { GetRecommendList } from '@/api/GetMusicList' // 确保路径正确
 import { MusicIdList } from '@/api/GetMusicFromList'
 import { Player } from '@/stores/index'
 import { useRouter } from 'vue-router'
 import { pagecontrol } from '@/stores/page'
+import { GetSearchData } from '@/api/Search'
+import { search } from '@/stores/search'
 
+const searcher = search()
 const router = useRouter()
 const store = Player()
 const pagecontroler = pagecontrol()
@@ -64,8 +62,6 @@ const pagecontroler = pagecontrol()
 interface Item {
   image: string
   title: string
-  subtitle?: string
-  badgeText?: string
   id: number
 }
 
@@ -74,7 +70,7 @@ const currentPage = ref(0)
 
 // --- 响应式布局核心逻辑 ---
 const windowWidth = ref(window.innerWidth)
-const currentCols = ref(5) // 默认大屏显示5列
+const currentCols = ref(4) // 默认大屏显示5列
 
 // 根据屏幕宽度计算每页显示的个数
 const updateColumns = () => {
@@ -89,16 +85,32 @@ const updateColumns = () => {
     currentCols.value = 2
   }
 }
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(
+  () => searcher.keyword,
+  (newKeyword) => {
+    if (typeof newKeyword !== 'string') return
 
+    // 清除上一次未执行的定时器
+    if (debounceTimer) clearTimeout(debounceTimer)
+
+    // 设置防抖，避免用户打字时频繁请求 (300ms 延迟)
+    debounceTimer = setTimeout(() => {
+      fetchData(newKeyword)
+    }, 300)
+  },
+  { immediate: true } // 立即执行一次以处理组件挂载时的初始值
+)
 // 监听 resize
 onMounted(() => {
   window.addEventListener('resize', updateColumns)
   updateColumns() // 初始化执行一次
-  fetchData()
+  fetchData(searcher.keyword)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateColumns)
+  if (debounceTimer) clearTimeout(debounceTimer)
 })
 
 // 计算属性：每页数量 = 行数(1) * 动态列数
@@ -113,14 +125,12 @@ watchEffect(() => {
 })
 
 // 数据获取
-const fetchData = async () => {
+const fetchData = async (Keyword) => {
   try {
-    const res = await NewMusicList()
-    items.value = (res || []).map((m: any) => ({
-      image: m.coverImgUrl,
+    const res = await GetSearchData({keyword: Keyword, type: 10, limit: 10})
+    items.value = (res.result.albums || []).map((m: any) => ({
+      image: m.picUrl,
       title: m.name,
-      subtitle: m.copywriter, // 网易云推荐语通常在 copywriter
-      badgeText: m.tags,
       id: m.id,
     }))
   } catch (err) {
