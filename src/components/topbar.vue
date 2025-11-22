@@ -1,7 +1,7 @@
 <template>
   <header class="topbar">
     <div class="left">
-      <button class="fold">
+      <button class="fold" @click="Fold">
         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32"><circle cx="9" cy="6" r="1" fill="currentColor"></circle><path d="M26 10H6a2.002 2.002 0 0 1-2-2V4a2.002 2.002 0 0 1 2-2h20a2.002 2.002 0 0 1 2 2v4a2.002 2.002 0 0 1-2 2zM6 4v4h20V4z" fill="currentColor"></path><circle cx="9" cy="16" r="1" fill="currentColor"></circle><path d="M26 20H6a2.002 2.002 0 0 1-2-2v-4a2.002 2.002 0 0 1 2-2h20a2.002 2.002 0 0 1 2 2v4a2.002 2.002 0 0 1-2 2zM6 14v4h20v-4z" fill="currentColor"></path><circle cx="9" cy="26" r="1" fill="currentColor"></circle><path d="M26 30H6a2.002 2.002 0 0 1-2-2v-4a2.002 2.002 0 0 1 2-2h20a2.002 2.002 0 0 1 2 2v4a2.002 2.002 0 0 1-2 2zM6 24v4h20v-4z" fill="currentColor"></path></svg>
       </button>
       <!-- 左侧可放返回/前进等，设置 no-drag 的按钮 -->
@@ -42,18 +42,21 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { userInfo } from '@/stores/userInfo'
+import { pagecontrol } from '@/stores/page'
 const isMax = ref(false)
 const userInfos = userInfo()
+const pagecontroler = pagecontrol()
 const minimize = () => {
   // electronAPI 由 preload 暴露
   window.electronAPI?.minimize?.()
 }
-
 const toggleMax = async () => {
   const res = await window.electronAPI?.toggleMaximize?.()
   isMax.value = !!res
 }
-
+const Fold = () => {
+  pagecontroler.IsFold = !pagecontroler.IsFold
+}
 const close = () => {
   window.electronAPI?.close?.()
 }
@@ -110,8 +113,8 @@ const ToUser = () => {
 }
 .tohome, .fold {
   background: none;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   border: none;
   color: rgba(255,255,255,0.6);
   cursor: pointer;

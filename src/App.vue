@@ -11,11 +11,12 @@
       :default-size="0.2"
       :max="0.33"
       :min="0.15"
-      :resize-trigger-size="2"
+      v-model:size="leftPaneSize"
+      :resize-trigger-size="pagecontroler.IsFold ? 0 : 2"
       @update:size="onPaneResize"
     >
       <!-- Pane 1: 左侧 -->
-      <template #1>
+      <template #1 >
         <div class="scroll-pane" v-if="pagecontroler.IsLogin" key="homepage">
           <Homepage />
         </div>
@@ -77,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { NSplit } from 'naive-ui'
 import { pagecontrol } from '@/stores/page'
@@ -116,7 +117,21 @@ onMounted(async () => {
     pagecontroler.IsLogin = false
   }
 })
+const leftPaneSize = ref(0.2) // 默认展开 20%
 
+// 新增：保存展开时的尺寸
+const expandedSize = ref(0.2)
+// 监听 IsFold 变化
+watch(() => pagecontroler.IsFold, (isFolded) => {
+  if (isFolded) {
+    // 折叠：保存当前尺寸，然后设为最小值
+    expandedSize.value = leftPaneSize.value
+    leftPaneSize.value = 0 // 最小值
+  } else {
+    // 展开：恢复保存的尺寸
+    leftPaneSize.value = expandedSize.value || 0.2
+  }
+}, { immediate: true })
 const debounce = (fn, delay = 100) => {
   let timer = null
   return (...args) => {
@@ -124,10 +139,16 @@ const debounce = (fn, delay = 100) => {
     timer = setTimeout(() => fn(...args), delay)
   }
 }
-
-const onPaneResize = debounce(() => {
+// 监听用户手动调整面板大小
+const onPaneResize = debounce((newSize) => {
+  // 只有在展开状态才保存用户调整的尺寸
+  if (!pagecontroler.IsFold) {
+    expandedSize.value = newSize
+  }
   window.dispatchEvent(new Event('resize'))
 }, 150)
+
+
 </script>
 
 <style scoped>

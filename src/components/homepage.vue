@@ -1,6 +1,6 @@
 <template>
     <div class="main">
-    
+    <p>nihao</p>
     </div>
 </template>
 

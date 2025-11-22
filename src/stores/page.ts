@@ -8,6 +8,7 @@ export const pagecontrol = defineStore('pagecontrol', {
         //IsLogin: false,
         ShowQRCode: false,
         IsLogin: false,
+        IsFold: false,
 
     }),
     actions: {
