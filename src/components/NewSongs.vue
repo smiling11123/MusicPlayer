@@ -19,8 +19,8 @@
             {{ song.name }}
             <span v-if="song.alias" class="alias">({{ song.alias }})</span>
           </div>
-          <div class="artist-name">
-            <span v-for="(artist, index) in song.artists" :key="artist.id">
+          <div class="artist-name" >
+            <span v-for="(artist, index) in song.artists" :key="artist.id" @click="TurnIn(artist.id)">
               {{ artist.name }}<span v-if="index < song.artists.length - 1"> / </span>
             </span>
           </div>
@@ -92,6 +92,9 @@ const playSong = (song: SongItem) => {
 const goToAllSongs = () => {
   console.log('跳转到全部新歌')
   // router.push('/new-songs')
+}
+const TurnIn = (artistid) => {
+  router.push({name: 'artist', params: { id: artistid } } )
 }
 </script>
 

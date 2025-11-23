@@ -4,12 +4,18 @@ import { createRouter, createWebHistory } from 'vue-router'
 import MusicList from '@/components/MusicList.vue'
 import Musichub from '@/components/MusicHub.vue'
 import SearchResult from '@/components/SearchResult.vue'
+import Album from '@/components/Album.vue'
 
 const routes = [
   {
     path: '/',
     name: 'Hub',
     component: Musichub,
+  },
+  {
+    path: '/SearchResult/artist/:id',
+    name: 'searchartist',
+    component: Artist,
   },
   {
     path: '/artist/:id',
@@ -21,11 +27,27 @@ const routes = [
     name: 'musiclist',
     component: MusicList,
   },
+    {
+    path: '/SearchResult/musiclist/:id',
+    name: 'searchmusiclist',
+    component: MusicList,
+  },
   {
     path: '/SearchResult',
     name: 'searchresult',
     component: SearchResult,
+  },
+  {
+    path: '/SearchResult/Album/:id',
+    name: 'searchalbum',
+    component: Album,
+  },
+  {
+    path: '/Album/:id',
+    name: 'album',
+    component: Album,
   }
+
 ]
 
 const router = createRouter({

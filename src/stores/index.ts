@@ -11,6 +11,20 @@ export interface Song {
   duration: number
   cover: string
 }
+interface Artist {
+  id: number
+  name: string
+}
+
+interface SongItem {
+  id: number
+  name: string
+  alias?: string // 歌曲别名（如：抖音DJ版）
+  artists: Artist[]
+  album: string
+  cover: string
+  duration?: number
+}
 export interface Playlist {
   id: number
   name: string
@@ -48,7 +62,7 @@ export const Player = defineStore(
       album: null,
     }) // 当前播放歌曲的详细信息
 
-    const currentSongList = ref<Song[]>([])
+    const currentSongList = ref<SongItem[]>([])
 
     const currentSongIndex: ComputedRef<number> = computed(() => {
       if (currentSong.value === null) return -1
@@ -128,7 +142,7 @@ export const Player = defineStore(
             id: song.songs[0].id,
             name: song.songs[0].name,
             album: song.songs[0].al?.name || '未知专辑',
-            artist: song.songs[0].ar?.map((a) => a.name).join('/') || '未知艺术家',
+            artists: song.songs[0].ar.map((ar: any) => ({ id: ar.id, name: ar.name })),
             duration: song.songs[0].dt ? Math.floor(song.songs[0].dt / 1000) : 0,
             cover: song.songs[0].al?.picUrl || '',
           }))
@@ -191,7 +205,7 @@ export const Player = defineStore(
         id: song.id,
         name: song.name,
         album: song.al?.name || '未知专辑',
-        artist: song.ar?.map((a) => a.name).join('/') || '未知艺术家',
+        artists: song.ar?.map((a) => a.name).join('/') || '未知艺术家',
         duration: song.dt ? Math.floor(song.dt / 1000) : 0,
         cover: song.al?.picUrl || '',
       })
@@ -299,10 +313,10 @@ export const Player = defineStore(
               id: song.id,
               name: song.name,
               album: song.al?.name || '未知专辑',
-              artist: song.ar?.map((a) => a.name).join('/') || '未知艺术家',
+              artists: song.ar.map((ar: any) => ({ id: ar.id, name: ar.name })),
               duration: song.dt ? Math.floor(song.dt / 1000) : 0,
               cover: song.al?.picUrl || '',
-            } as Song
+            } as SongItem
           })
 
         // 批量插入到 currentSongList（保持同步）

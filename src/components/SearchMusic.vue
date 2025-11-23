@@ -19,8 +19,8 @@
             {{ song.name }}
           </div>
           <div class="artist-name">
-            <span v-for="(artist, index) in song.artist" :key="artist">
-              {{ artist }}<span v-if="index < song.artist.length - 1"> / </span>
+            <span v-for="(artist, index) in song.artists" :key="artist.id" @click="TurnIn(artist.id)">
+              {{ artist.name }}<span v-if="index < song.artists.length - 1"> / </span>
             </span>
           </div>
         </div>
@@ -38,10 +38,24 @@ import { search } from '@/stores/search'
 import { GetMusicDetail } from '@/api/GetMusic'
 import { Song } from '@/stores/index'
 
+interface Artist {
+  id: number
+  name: string
+}
+
+interface SongItem {
+  id: number
+  name: string
+  alias?: string // 歌曲别名（如：抖音DJ版）
+  artists: Artist[]
+  album: string
+  cover: string
+  duration?: number
+}
 // --- 状态与逻辑 ---
 const router = useRouter()
 const store = Player()
-const songsList = ref<Song[]>([])
+const songsList = ref<SongItem[]>([])
 const searcher = search()
 
 // 防抖定时器
@@ -73,7 +87,8 @@ const loadMusic = async (Keyword: string) => {
         name: song.name,
         album: song.al?.name || '未知专辑',
         // 优化 artist 提取，直接拿 name 数组
-        artist: song.ar?.map((a: any) => a.name) || ['未知艺术家'],
+        artists: song.ar.map((ar: any) => ({ id: ar.id, name: ar.name })),
+
         duration: song.dt ? Math.floor(song.dt / 1000) : 0,
         cover: song.al?.picUrl || '',
       }))
@@ -106,13 +121,16 @@ onUnmounted(() => {
 })
 
 // --- 播放与交互逻辑保持不变 ---
-const playSong = (song: Song) => {
+const playSong = (song: SongItem) => {
   store.addSongToPlaylist(song.id, store.currentSongIndex + 1)
   store.playcurrentSong({ firstId: song.id })
 }
 
 const goToAllSongs = () => {
   // router.push('/new-songs')
+}
+const TurnIn = (artistid) => {
+  router.push({name: 'artist', params: { id: artistid } } )
 }
 </script>
 

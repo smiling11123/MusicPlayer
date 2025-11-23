@@ -268,7 +268,7 @@ $primary: #0bdc9a;
     width: 200px;
     height: 200px;
     flex-shrink: 0;
-    border-radius: 50%;
+    border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 

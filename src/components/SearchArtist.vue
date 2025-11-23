@@ -23,7 +23,7 @@
               <img :src="item.image" alt="" class="hq-img" loading="lazy" />
             </div>
             <div class="artist-name">
-              <span>{{ item.name }}</span>
+              <span @click="TurnIn(item)">{{ item.name }}</span>
             </div>
           </div>
 
@@ -150,7 +150,7 @@ const next = () => { if (currentPage.value < pageCount.value - 1) currentPage.va
 
 // 跳转详情
 const TurnIn = (item: Item) => {
-  router.push({ name: 'musiclist', params: { id: item.id } })
+  router.push({ name: 'searchartist', params: { id: item.id } })
 }
 
 async function play(item: Item) {
