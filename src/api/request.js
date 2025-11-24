@@ -1,4 +1,3 @@
-import { timestamp } from '@vueuse/core'
 import axios from 'axios'
 
 export const request = axios.create({

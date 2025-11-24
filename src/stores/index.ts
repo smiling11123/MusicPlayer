@@ -1,4 +1,4 @@
-import { MusicUrl, GetMusicDetail, GetMusicLyric, GetWordMusicLyric } from '@/api/GetMusic'
+import { MusicUrl, GetMusicDetail, GetMusicLyric, GetWordMusicLyric, UnblockMusicUrl } from '@/api/GetMusic'
 import { defineStore } from 'pinia'
 import { computed, ComputedRef, ref } from 'vue'
 import { GetPersonalFM } from '@/api/GetMusicList'
@@ -88,13 +88,17 @@ export const Player = defineStore(
     }
     const playcurrentSong = async (input) => {
       const id = input.firstId || input
+      const unblockurls = ref(null)
       isplaying.value = true // 设置播放状态为 true
-      const urls = await MusicUrl({ id: id }) // 获取歌曲 URL
+      const urls = await MusicUrl({id: id})
+      if(urls[0].url === null ){
+        unblockurls.value = await UnblockMusicUrl(id) // 获取歌曲 URL
+      }
       const data = await GetMusicDetail({ ids: id }) // 获取歌曲详细信息
       const lyric = await GetMusicLyric(id)
       //const wordlyric = await GetWordMusicLyric(id)
       const detail = data.songs[0] // 设置当前歌曲详细信息
-      currentSongUrl.value = urls[0].url
+      currentSongUrl.value = urls[0].url?? unblockurls.value.data.url
       currentSongLyric.value = lyric.lrc?.lyric
       currentSongTLyric.value = lyric.tlyric?.lyric || null
       //currentSongWordLyric.value = wordlyric
@@ -108,7 +112,7 @@ export const Player = defineStore(
         album: detail.al.name,
       }
       currentSong.value = id
-      audio.src = urls[0].url // 设置音频源
+      audio.src = urls[0].url?? unblockurls.value.data.url // 设置音频源
       currentSongTime.value = audio.currentTime
       setupAudioListener() // 设置音频监听器
       audio.load()
