@@ -1,5 +1,5 @@
 {
-  "name": "yesplaymusic",
+  "name": "polomusic",
   "version": "1.0.0",
   "private": true,
   "description": "This template should help get you started developing with Vue 3 in Vite.",
@@ -22,7 +22,8 @@
     "prepare": "husky install",
     "pkgwin": "pkg . -t node18-win-x64 -C GZip -o bin/app --no-bytecode",
     "pkglinux": "pkg . -t node18-linux-x64 -C GZip -o bin/app --no-bytecode",
-    "pkgmacos": "pkg . -t node18-macos-x64 -C GZip -o bin/app --no-bytecode"
+    "pkgmacos": "pkg . -t node18-macos-x64 -C GZip -o bin/app --no-bytecode",
+    "electron:build": "vite build && electron-builder"
   },
   "bin": "net/app.js",
   "pkg": {
@@ -120,5 +121,41 @@
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
+  },
+  "build": {
+    "appId": "com.polomusic.app",
+    "productName": "polomusic",
+    "copyright": "Copyright © 2024 yb",
+    "directories": {
+      "output": "release/${version}"
+    },
+    "files": [
+      "dist/**/*",
+      "net/**/*",
+      "src/background.js",
+      "src/electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}" 
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true
+    },
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/node-windows/**/*"
+    ]
   }
 }

@@ -57,6 +57,7 @@ const isMax = ref(false)
 const userInfos = userInfo()
 const searchKeyWord = ref('')
 const pagecontroler = pagecontrol()
+
 const minimize = () => {
   // electronAPI 由 preload 暴露
   window.electronAPI?.minimize?.()

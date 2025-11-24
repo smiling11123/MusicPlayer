@@ -11,6 +11,7 @@ const createWindow = () => {
     transparent: false,
     titleBarStyle: 'hidden',
     webPreferences: {
+      webSecurity: true, 
       preload: path.join(__dirname, 'electron', 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,

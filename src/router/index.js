@@ -1,6 +1,6 @@
 import Homepage from '@/components/HomePage.vue'
 import Artist from '@/components/Artist.vue'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
 import MusicList from '@/components/MusicList.vue'
 import Musichub from '@/components/MusicHub.vue'
 import SearchResult from '@/components/SearchResult.vue'
@@ -57,7 +57,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes,
 })
 
