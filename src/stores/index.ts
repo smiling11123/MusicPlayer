@@ -88,7 +88,7 @@ export const Player = defineStore(
       if (currentSong.value && isplaying.value === false) {
         isplaying.value = true
         const urls = await MusicUrl({ id: currentSong.value })
-        const url = urls[0].url
+        const url = currentSongUrl.value ?? urls[0].url
         audio.src = url
         setupAudioListener()
         audio.load()
@@ -132,6 +132,12 @@ export const Player = defineStore(
       const detail = data.value.songs[0] // 设置当前歌曲详细信息
       currentSongUrl.value = urls.value
       const url = currentSongUrl.value.toString()
+
+      audio.src = url // 设置音频源
+      currentSongTime.value = audio.currentTime
+      setupAudioListener() // 设置音频监听器
+      audio.load()
+      audio.play() // 播放音频
       currentSongLyric.value = lyric.value.lrc?.lyric
       currentSongTLyric.value = lyric.value.tlyric?.lyric || null
       //currentSongWordLyric.value = wordlyric
@@ -144,11 +150,6 @@ export const Player = defineStore(
         album: detail.al.name,
       }
       currentSong.value = id
-      audio.src = url // 设置音频源
-      currentSongTime.value = audio.currentTime
-      setupAudioListener() // 设置音频监听器
-      audio.load()
-      audio.play() // 播放音频
       const nextIndex = currentSongIndex.value + 1
       console.log('current', currentSongIndex.value)
       console.log('next', nextIndex)
@@ -234,7 +235,7 @@ export const Player = defineStore(
           addSongsToPlaylist(ids)
         }
       }
-      playNextSong() // 播放下一首歌曲
+      await playNextSong() // 播放下一首歌曲
     }
     const addSongToPlaylist = async (songid, next) => {
       if (playlist.value.includes(songid)) {
@@ -278,6 +279,9 @@ export const Player = defineStore(
           play()
           return
         }
+        audio.src = currentSongUrl.value.toString()
+        audio.load()
+        audio.currentTime = currentSongTime.value
         audio
           .play()
           .then(() => {
@@ -415,6 +419,7 @@ export const Player = defineStore(
       currentSongLyric,
       currentSongTLyric,
       currentSongWordLyric,
+      currentSongUrl,
       useCookie,
       currentSongList,
       currentSongIndex,

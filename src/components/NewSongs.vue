@@ -19,8 +19,12 @@
             {{ song.name }}
             <span v-if="song.alias" class="alias">({{ song.alias }})</span>
           </div>
-          <div class="artist-name" >
-            <span v-for="(artist, index) in song.artists" :key="artist.id" @click="TurnIn(artist.id)">
+          <div class="artist-name">
+            <span
+              v-for="(artist, index) in song.artists"
+              :key="artist.id"
+              @click="TurnIn(artist.id)"
+            >
               {{ artist.name }}<span v-if="index < song.artists.length - 1"> / </span>
             </span>
           </div>
@@ -71,7 +75,7 @@ onMounted(async () => {
       artists: item.song.artists.map((ar: any) => ({ id: ar.id, name: ar.name })),
       album: item.song.album.name,
       cover: item.picUrl,
-      duration: item.song.duration,
+      duration: Math.floor( item.song.duration / 1000),
     }))
   } catch (error) {
     console.error('获取新歌失败', error)
@@ -91,10 +95,10 @@ const playSong = (song: SongItem) => {
 
 const goToAllSongs = () => {
   console.log('跳转到全部新歌')
-  // router.push('/new-songs')
+  router.push({ name: 'WholeNewSongs' })
 }
 const TurnIn = (artistid) => {
-  router.push({name: 'artist', params: { id: artistid } } )
+  router.push({ name: 'artist', params: { id: artistid } })
 }
 </script>
 

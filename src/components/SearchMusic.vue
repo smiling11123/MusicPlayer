@@ -133,7 +133,7 @@ const playSong = (song: SongItem) => {
 }
 
 const goToAllSongs = () => {
-  // router.push('/new-songs')
+  router.push({name: 'WholeSearchSongs'})
 }
 const TurnIn = (artistid) => {
   router.push({ name: 'artist', params: { id: artistid } })

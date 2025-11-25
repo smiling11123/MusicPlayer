@@ -1,45 +1,11 @@
 <template>
-  <div class="playlist-page">
+  <div class="playlist-page" @scroll="handleScroll">
     <div v-if="isLoading" class="loading-state">
       <div class="loading-spinner"></div>
       <p>正在加载...</p>
     </div>
 
     <div v-else>
-      <div class="playlist-header">
-        <div class="cover-wrap">
-          <img :src="playlist.coverImgUrl" alt="歌单封面" class="cover" />
-        </div>
-
-        <div class="info">
-          <div class="title-row">
-            <h1 class="title">{{ playlist.name }}</h1>
-          </div>
-
-          <div class="creator-info" v-if="playlist.creator">
-            <img :src="playlist.creator.avatarUrl" class="avatar" />
-            <span class="name">{{ playlist.creator.nickname }}</span>
-            <span class="date">最近更新: {{ formatDate(playlist.updateTime) }}</span>
-          </div>
-
-          <div class="description-wrapper">
-            <p class="description" :title="playlist.description">{{ playlist.description }}</p>
-          </div>
-
-          <div class="actions">
-            <button size="large" @click="playAll" class="play-all-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
-            <div class="stats-text">
-              歌曲数: {{ playlist.trackCount }} &nbsp;|&nbsp; 播放量:
-              {{ formatPlayCount(playlist.playCount) }}
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="song-list-container">
         <div class="list-header">
           <div class="col-cover"></div>
@@ -74,15 +40,11 @@
               <div class="song-title" :title="song.name">
                 {{ song.name }}
               </div>
-              <div class="artist-name">
-            <span
-              v-for="(artist, index) in song.artists"
-              :key="artist.id"
-              @click="TurnIn(artist.id)"
-            >
+              <div class="song-artist" >
+                <span v-for="(artist, index) in song.artists" :key="artist.id" @click="TurnIn(artist.id)">
               {{ artist.name }}<span v-if="index < song.artists.length - 1"> / </span>
             </span>
-          </div>
+              </div>
             </div>
 
             <div class="album-info" :title="song.album">
@@ -92,7 +54,7 @@
             <div class="right-actions">
               <button class="action-btn like">
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
+                  xmlns="http://www.w3.org/2000/svg "
                   width="18"
                   height="18"
                   viewBox="0 0 24 24"
@@ -111,6 +73,13 @@
             </div>
           </div>
         </div>
+
+        <!-- 加载提示 -->
+        <div v-if="isLoadingMore" class="loading-more">
+          <div class="loading-spinner small"></div>
+          <span>正在加载更多...</span>
+        </div>
+        <div v-if="!hasMore && songs.length > 0" class="no-more-data">没有更多歌曲了</div>
       </div>
     </div>
   </div>
@@ -118,16 +87,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { Player } from '@/stores/index'
-import { NButton } from 'naive-ui'
-import { GetMusicFromList } from '@/api/GetMusicFromList'
-import type { Song, Playlist } from '@/stores/index'
-
+import type { Song } from '@/stores/index'
+import { GetMusicDetail } from '@/api/GetMusic'
+import { GetRecommendNewMusic } from '@/api/GetMusicList'
 const playerStore = Player()
 const router = useRouter()
-const route = useRoute()
-const isLoading = ref(true)
+const isLoading = ref(false)
+const isLoadingMore = ref(false)
+const hasMore = ref(true)
+const offset = ref(0)
+const limit = 50
+const isWholeListMode = ref(false)
 // --- 数据接口定义 ---
 interface Artist {
   id: number
@@ -143,67 +115,110 @@ interface SongItem {
   cover: string
   duration?: number
 }
-
-const playlist = ref<any>({
-  id: 0,
-  name: '',
-  coverImgUrl: '',
-  description: '',
-  playCount: 0,
-  trackCount: 0,
-  creator: null,
-  updateTime: 0,
-})
-
 const songs = ref<SongItem[]>([])
 const currentSongId = computed(() => playerStore.currentSong || null)
-
-const MusicListId = computed(() => {
-  const id = route.params.id
-  return Array.isArray(id) ? Number(id[0]) : Number(id)
-})
+const addsongs = ref<SongItem[]>([])
 
 async function loadPlaylistData() {
   isLoading.value = true
+  isWholeListMode.value = false
+  hasMore.value = true
+  offset.value = 0
+
   try {
-    const id = MusicListId.value
-    if (!id) return
 
-    const res = await GetMusicFromList({ id })
-    const pl = res.playlist
+    const res = await GetRecommendNewMusic({limit: 50})
 
-    playlist.value = {
-      id: pl.id,
-      name: pl.name,
-      coverImgUrl: pl.coverImgUrl,
-      description: pl.description || '暂无简介',
-      playCount: pl.playCount,
-      trackCount: pl.trackCount,
-      creator: pl.creator,
-      updateTime: pl.updateTime,
-    }
-
-    songs.value = pl.tracks.map((track: any) => ({
-      id: track.id,
-      cover: track.al.picUrl,
-      name: track.name,
-      alia: track.alia, // 别名
-      album: track.al?.name || '未知专辑',
-      artists: track.ar?.map((ar: any) => ({ id: ar.id, name: ar.name })),
-      duration: track.dt ? Math.floor(track.dt / 1000) : 0,
+   songs.value = (res.result || []).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      alias: item.song.alias?.[0] || item.song.transName || '',
+      artists: item.song.artists.map((ar: any) => ({ id: ar.id, name: ar.name })),
+      album: item.song.album.name,
+      cover: item.picUrl,
+      duration: Math.floor( item.song.duration / 1000),
     }))
   } catch (err) {
-    console.error(err)
+    console.error('加载艺人数据失败:', err)
   } finally {
     isLoading.value = false
   }
 }
 
-onMounted(loadPlaylistData)
-watch(
-  () => MusicListId.value,
-  (v) => v && loadPlaylistData(),
-)
+async function loadWholelistData(loadMore = false) {
+  // 防止重复加载
+  if (isLoading.value || isLoadingMore.value) return
+
+  // 如果不是加载更多，则重置状态
+  if (!loadMore) {
+    offset.value = 0
+    hasMore.value = true
+    songs.value = []
+    isWholeListMode.value = true
+  } else if (!hasMore.value) {
+    return // 没有更多数据了
+  }
+
+  isLoadingMore.value = loadMore
+  isLoading.value = !loadMore
+
+  try {
+    // 调用支持分页的API
+    // 注意：需要你的后端接口支持 offset 和 limit 参数
+    const res = await GetRecommendNewMusic({offset:offset.value, limit:50})
+
+    // 检查是否还有更多数据
+    if (res.result.length < limit || res.result.length === 0) {
+      hasMore.value = false
+    }
+    
+    addsongs.value = (res.result || []).map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      alias: item.song.alias?.[0] || item.song.transName || '',
+      artists: item.song.artists.map((ar: any) => ({ id: ar.id, name: ar.name })),
+      album: item.song.album.name,
+      cover: item.picUrl,
+      duration: Math.floor( item.song.duration / 1000),
+    }))
+  } catch (error) {
+    console.error('获取新歌失败', error)
+  }
+  try{
+
+    // 追加到新数据到现有列表
+    songs.value = [...songs.value, ...addsongs.value]
+
+    // 更新偏移量
+    offset.value += limit
+
+  } catch (err) {
+    console.error('加载全部歌曲失败:', err)
+  } finally {
+    isLoading.value = false
+    isLoadingMore.value = false
+  }
+}
+
+function handleScroll(e: Event) {
+  // 只在"全部歌曲"模式下启用无限滚动
+  if (!isWholeListMode.value) return
+
+  const target = e.target as HTMLElement
+  const { scrollTop, scrollHeight, clientHeight } = target
+
+  // 距离底部 100px 时开始加载
+  if (scrollHeight - scrollTop - clientHeight < 200) {
+    if (!isLoadingMore.value && hasMore.value && songs.value.length > 0) {
+      loadWholelistData(true)
+    }
+  }
+}
+
+onMounted (async () => {
+    loadWholelistData(false)
+})
+
 
 function formatPlayCount(n: number) {
   if (n > 100000000) return (n / 100000000).toFixed(1) + '亿'
@@ -229,26 +244,24 @@ function playAll() {
   if (songs.value.length) {
     playerStore.playFM = false
     playerStore.playnormal = true
-    playerStore.playcurrentSong(songs.value[0].id)
     playerStore.addWholePlaylist(songs.value.map((s) => s.id))
+    playerStore.playcurrentSong(songs.value[0].id)
   }
 }
 
 function playSong(song: SongItem, index: number) {
   playerStore.playFM = false
   playerStore.playnormal = true
-  playerStore.playcurrentSong(song.id)
   playerStore.addWholePlaylist(songs.value.map((s) => s.id))
+  playerStore.playcurrentSong(song.id)
 }
-
 const TurnIn = (artistid) => {
-  router.push({ name: 'artist', params: { id: artistid } })
+  router.push({name: 'artist', params: { id: artistid } } )
 }
 </script>
 
 <style scoped lang="scss">
-// 变量定义
-$bg-color: #1c1c1e; // 你截图中的深色背景
+$bg-color: #1c1c1e;
 $item-hover: rgba(255, 255, 255, 0.06);
 $text-main: #e0e0e0;
 $text-sub: #888888;
@@ -262,7 +275,20 @@ $primary: #0bdc9a;
   border-radius: 30px;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  user-select: none;
+  overflow-y: auto;
+  height: 100vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -279,7 +305,7 @@ $primary: #0bdc9a;
     animation: spin 1s linear infinite;
   }
 }
-// --- 头部 ---
+
 .playlist-header {
   display: flex;
   gap: 30px;
@@ -289,7 +315,7 @@ $primary: #0bdc9a;
     width: 200px;
     height: 200px;
     flex-shrink: 0;
-    border-radius: 12px;
+    border-radius: 50%;
     overflow: hidden;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 
@@ -311,41 +337,11 @@ $primary: #0bdc9a;
       gap: 12px;
       margin-bottom: 12px;
 
-      .tag {
-        border: 1px solid $primary;
-        color: $primary;
-        font-size: 13px;
-        padding: 2px 6px;
-        border-radius: 4px;
-      }
-
       .title {
         font-size: 30px;
         font-weight: 700;
         line-height: 1.2;
         margin: 0;
-      }
-    }
-
-    .creator-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      font-size: 13px;
-      color: $text-sub;
-
-      .avatar {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-      }
-      .name {
-        color: #ccc;
-        cursor: pointer;
-        &:hover {
-          color: #fff;
-        }
       }
     }
 
@@ -367,14 +363,10 @@ $primary: #0bdc9a;
       align-items: center;
       gap: 20px;
       margin-top: 15px;
-
-      .stats-text {
-        font-size: 13px;
-        color: $text-sub;
-      }
     }
   }
 }
+
 .play-all-btn {
   bottom: 12px;
   right: 12px;
@@ -384,7 +376,7 @@ $primary: #0bdc9a;
   color: #fff;
   border: none;
   border-radius: 50%;
-  transform: translate(0, 5px); // 默认向下偏移一点
+  transform: translate(0, 5px);
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
@@ -395,8 +387,41 @@ $primary: #0bdc9a;
   &:active {
     transform: scale(0.95) !important;
   }
+
+  svg {
+    margin-left: 3px;
+  }
 }
-// --- 列表部分 ---
+
+.show-list {
+  bottom: 12px;
+  right: 12px;
+  width: 80px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  align-items: center;
+  justify-self: center;
+  transform: translate(0, 5px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+
+  &:hover {
+    transform: scale(1) !important;
+    background: rgba(255, 255, 255, 0.2);
+  }
+  &:active {
+    transform: scale(0.95) !important;
+  }
+}
+
+.show-list-info {
+  font-size: 13px;
+}
+
 .song-list-container {
   max-width: 100%;
 }
@@ -411,7 +436,7 @@ $primary: #0bdc9a;
 
   .col-cover {
     width: 80px;
-  } // 包含序号宽 + 封面宽
+  }
   .col-title {
     flex: 2;
   }
@@ -432,8 +457,8 @@ $primary: #0bdc9a;
 
 .song-item {
   display: flex;
-  align-items: center; // 关键：垂直居中
-  height: 60px; // 固定高度，防止太高
+  align-items: center;
+  height: 60px;
   padding: 0 10px;
   border-radius: 6px;
   transition: all 0.2s;
@@ -461,7 +486,6 @@ $primary: #0bdc9a;
     }
   }
 
-  // 1. 序号
   .song-index {
     width: 30px;
     text-align: center;
@@ -496,7 +520,6 @@ $primary: #0bdc9a;
     }
   }
 
-  // 2. 封面
   .cover-container {
     width: 40px;
     height: 40px;
@@ -529,28 +552,21 @@ $primary: #0bdc9a;
     }
   }
 
-  // 3. 歌名 + 歌手
   .main-info {
-    flex: 2; // 占据主要空间
+    flex: 2;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    overflow: hidden; // 必须，否则无法省略
+    overflow: hidden;
     margin-right: 20px;
 
     .song-title {
       font-size: 15px;
       color: $text-main;
       margin-bottom: 2px;
-      white-space: nowrap; // 不换行
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-
-      .alia {
-        color: $text-sub;
-        margin-left: 4px;
-        font-size: 13px;
-      }
     }
 
     .song-artist {
@@ -561,23 +577,7 @@ $primary: #0bdc9a;
       text-overflow: ellipsis;
     }
   }
-  .artist-name {
-  font-size: 12px;
-  color: $text-sub;
 
-  // 单行省略
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  span {
-    cursor: pointer;
-    &:hover {
-      color: $text-main;
-    }
-  }
-}
-  // 4. 专辑
   .album-info {
     flex: 1;
     font-size: 13px;
@@ -588,7 +588,6 @@ $primary: #0bdc9a;
     margin-right: 20px;
   }
 
-  // 5. 右侧操作
   .right-actions {
     width: 80px;
     display: flex;
@@ -602,7 +601,7 @@ $primary: #0bdc9a;
       border: none;
       color: $text-sub;
       cursor: pointer;
-      opacity: 0; // 默认隐藏
+      opacity: 0;
       padding: 4px;
       &:hover {
         color: #fff;
@@ -617,7 +616,23 @@ $primary: #0bdc9a;
   }
 }
 
-// 动画
+.loading-more,
+.no-more-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: $text-sub;
+  font-size: 13px;
+  gap: 10px;
+}
+
+.loading-more .loading-spinner.small {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
+}
+
 @keyframes bounce {
   0%,
   100% {
@@ -628,7 +643,15 @@ $primary: #0bdc9a;
   }
 }
 
-// 移动端适配
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 768px) {
   .list-header {
     display: none;

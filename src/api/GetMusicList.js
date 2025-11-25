@@ -46,7 +46,7 @@ export const GetHotMusic = async (params) => {
 export const GetRecommendNewMusic = async (params) => {
   return request({
     url: '/personalized/newsong',
-    params: {limit: params?.limit || 10},
+    params: {offset: params?.offset || 0, limit: params?.limit || 10},
   }).then((res) => res.data)
 }
 //获取榜单
@@ -107,5 +107,13 @@ export const GetNextPersonalFM = async (params) => {
     url: '/personal_fm/trash',
     params: withCookie({id: params}),
     method: 'post',
+  }).then((res) => res.data)
+}
+
+//获取用户歌单
+export const GetUserMusicList = async (param) => {
+  return request({
+    url: '/user/playlist',
+    params: withCookie({uid: param})
   }).then((res) => res.data)
 }

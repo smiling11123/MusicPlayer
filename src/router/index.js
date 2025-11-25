@@ -6,6 +6,8 @@ import Musichub from '@/components/MusicHub.vue'
 import SearchResult from '@/components/SearchResult.vue'
 import Album from '@/components/Album.vue'
 import DailyRecommendMusic from '@/components/DailyRecommendMusic.vue'
+import WholeNewSongs from '@/components/WholeNewSongs.vue'
+import WholeSearchSongs from '@/components/WholeSearchSongs.vue'
 
 const routes = [
   {
@@ -53,7 +55,16 @@ const routes = [
     name: 'DailyRecommendMusic',
     component: DailyRecommendMusic,
   },
-
+  {
+    path: '/WholeNewSongs',
+    name: 'WholeNewSongs',
+    component: WholeNewSongs,
+  },
+  {
+    path: '/WholeSearchSongs',
+    name: 'WholeSearchSongs',
+    component: WholeSearchSongs,
+  },
 ]
 
 const router = createRouter({
