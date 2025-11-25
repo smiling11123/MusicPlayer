@@ -120,9 +120,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Player } from '@/stores/index'
-import { NButton } from 'naive-ui'
 import { GetMusicFromList } from '@/api/GetMusicFromList'
-import type { Song, Playlist } from '@/stores/index'
 
 const playerStore = Player()
 const router = useRouter()

@@ -56,7 +56,6 @@
 <script setup lang="ts">
 import { Player } from '@/stores/index'
 import { computed } from 'vue'
-import type { Song } from '@/stores/index'
 import { useRouter } from 'vue-router'
 // 移除了 Naive UI 组件的引入
 interface Artist {

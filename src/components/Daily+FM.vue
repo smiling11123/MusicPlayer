@@ -150,6 +150,7 @@ onMounted(async () => {
 })
 async function play() {
   const idRes: any = mappedDailySongs.value
+  player.isplaying = true
   player.playnormal = true
   player.playFM = false
   // 从响应中提取 id 列表（根据你的后端结构调整）

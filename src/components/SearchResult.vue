@@ -8,13 +8,6 @@
 </template>
 
 <script setup lang="ts">
-import ArtistList from './SearchArtist.vue'
-import Banner from './Banner.vue'
-import DailyFM from './Daily+FM.vue'
-import HighQualityMusicList from './HighQualityMusicList.vue'
-import NewMusicList from './NewMusicList.vue'
-import NewSongs from './NewSongs.vue'
-import RecommendList from './RecommendList.vue'
 import SearchMusic from './SearchMusic.vue'
 import SearchArtist from './SearchArtist.vue'
 import SearchAlbum from './SearchAlbum.vue'

@@ -86,12 +86,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Player } from '@/stores/index'
-import type { Song } from '@/stores/index'
 import { GetMusicDetail } from '@/api/GetMusic'
-import { GetRecommendNewMusic } from '@/api/GetMusicList'
 import { GetSearchData } from '@/api/Search'
 import { search } from '@/stores/search'
 const playerStore = Player()

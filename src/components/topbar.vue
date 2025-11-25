@@ -51,7 +51,7 @@
     </div>
 
     <div class="center">
-      <button class="tohome" @click="$router.push('/')">
+      <button class="tohome" @click="$router.replace('/')">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -143,7 +143,6 @@ import { pagecontrol } from '@/stores/page'
 import { useRouter } from 'vue-router'
 import { search } from '@/stores/search'
 import SearchBox from './SearchBox.vue'
-import { GetSearchData } from '@/api/Search'
 import { LogOut } from '@/api/Login'
 
 const searcher = search()

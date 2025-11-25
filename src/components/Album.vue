@@ -8,17 +8,17 @@
     <div v-else>
       <div class="playlist-header">
         <div class="cover-wrap">
-          <img :src="ArtistDetail.coverImgUrl" alt="歌单封面" class="cover" />
+          <img :src="AlbumDetail.coverImgUrl" alt="歌单封面" class="cover" />
         </div>
 
         <div class="info">
           <div class="title-row">
-            <h1 class="title">{{ ArtistDetail.name }}</h1>
+            <h1 class="title">{{ AlbumDetail.name }}</h1>
           </div>
 
           <div class="description-wrapper">
-            <p class="description" :title="ArtistDetail.description">
-              {{ ArtistDetail.description }}
+            <p class="description" :title="AlbumDetail.description">
+              {{ AlbumDetail.description }}
             </p>
           </div>
 
@@ -66,8 +66,14 @@
               <div class="song-title" :title="song.name">
                 {{ song.name }}
               </div>
-              <div class="song-artist" :title="song.artist">
-                {{ song.artist }}
+              <div class="artist-name">
+                <span
+                  v-for="(artist, index) in song.artists"
+                  :key="artist.id"
+                  @click="TurnIn(artist.id)"
+                >
+                  {{ artist.name }}<span v-if="index < song.artists.length - 1"> / </span>
+                </span>
               </div>
             </div>
 
@@ -104,26 +110,25 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Player } from '@/stores/index'
-import { NButton } from 'naive-ui'
-import { GetMusicFromList } from '@/api/GetMusicFromList'
-import type { Song, Playlist } from '@/stores/index'
-import { GetArtist } from '@/api/Artist'
+import type { SongItem } from '@/stores/index'
 import { GetMusicDetail } from '@/api/GetMusic'
+import { GetAlbum } from '@/api/Album'
 
 const playerStore = Player()
 const route = useRoute()
+const router = useRouter()
 const isLoading = ref(true)
 
-const ArtistDetail = ref<any>({
+const AlbumDetail = ref<any>({
   id: 0,
   name: '',
   coverImgUrl: '',
   description: '',
 })
 
-const songs = ref<Song[]>([])
+const songs = ref<SongItem[]>([])
 const currentSongId = computed(() => playerStore.currentSong || null)
 
 const ArtistId = computed(() => {
@@ -137,13 +142,13 @@ async function loadPlaylistData() {
     const arid = ArtistId.value
     if (!arid) return
 
-    const res = await GetArtist(arid)
-    const hotsongs = res.hotSongs
-    const pl = res.artist
+    const res = await GetAlbum(arid)
+    const hotsongs = res.songs
+    const pl = res.album
     const playlist = ref()
     console.log(hotsongs)
     console.log(pl)
-    ArtistDetail.value = {
+    AlbumDetail.value = {
       id: pl.id,
       name: pl.name,
       coverImgUrl: pl.picUrl,
@@ -186,7 +191,7 @@ async function loadPlaylistData() {
           id: song.songs[0].id,
           name: song.songs[0].name,
           album: song.songs[0].al?.name || '未知专辑',
-          artist: song.songs[0].ar?.map((a) => a.name).join('/') || '未知艺术家',
+          artists: song.songs[0].ar.map((ar: any) => ({ id: ar.id, name: ar.name })),
           duration: song.songs[0].dt ? Math.floor(song.songs[0].dt / 1000) : 0,
           cover: song.songs[0].al?.picUrl || '',
         }))
@@ -236,11 +241,15 @@ function playAll() {
   }
 }
 
-function playSong(song: Song, index: number) {
+function playSong(song: SongItem, index: number) {
   playerStore.playFM = false
   playerStore.playnormal = true
   playerStore.addWholePlaylist(songs.value.map((s) => s.id))
   playerStore.playcurrentSong(song.id)
+}
+
+const TurnIn = (artistid) => {
+  router.push({ name: 'artist', params: { id: artistid } })
 }
 </script>
 
@@ -537,12 +546,21 @@ $primary: #0bdc9a;
       }
     }
 
-    .song-artist {
+    .artist-name {
       font-size: 12px;
       color: $text-sub;
+
+      // 单行省略
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+
+      span {
+        cursor: pointer;
+        &:hover {
+          color: $text-main;
+        }
+      }
     }
   }
 

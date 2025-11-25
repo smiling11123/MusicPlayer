@@ -1,6 +1,5 @@
-import Homepage from '@/components/HomePage.vue'
 import Artist from '@/components/Artist.vue'
-import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import MusicList from '@/components/MusicList.vue'
 import Musichub from '@/components/MusicHub.vue'
 import SearchResult from '@/components/SearchResult.vue'
@@ -8,7 +7,8 @@ import Album from '@/components/Album.vue'
 import DailyRecommendMusic from '@/components/DailyRecommendMusic.vue'
 import WholeNewSongs from '@/components/WholeNewSongs.vue'
 import WholeSearchSongs from '@/components/WholeSearchSongs.vue'
-
+import MV from '@/components/MV.vue'
+import Video from '@/components/Video.vue'
 const routes = [
   {
     path: '/',
@@ -21,6 +21,11 @@ const routes = [
     component: Artist,
   },
   {
+    path: '/mv/:id',
+    name: 'mv',
+    component: MV,
+  },
+  {
     path: '/artist/:id',
     name: 'artist',
     component: Artist,
@@ -30,7 +35,7 @@ const routes = [
     name: 'musiclist',
     component: MusicList,
   },
-    {
+  {
     path: '/SearchResult/musiclist/:id',
     name: 'searchmusiclist',
     component: MusicList,
@@ -64,6 +69,16 @@ const routes = [
     path: '/WholeSearchSongs',
     name: 'WholeSearchSongs',
     component: WholeSearchSongs,
+  },
+  {
+    path: '/SearchResult/mv/:id',
+    name: 'searchmv',
+    component: MV,
+  },
+    {
+    path: '/SearchResult/video/:id',
+    name: 'searchvideo',
+    component: Video,
   },
 ]
 

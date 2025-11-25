@@ -30,8 +30,14 @@
               {{ player.currentSongDetail.name || '未知歌曲' }}
             </h2>
             <div class="artist-name">
-            <span v-for="(artist, index) in player.currentSongDetail.artists" :key="artist.id" @click="TurnIn(artist.id)">
-              {{ artist.name }}<span v-if="index < player.currentSongDetail.artists.length - 1"> / </span></span>
+              <span
+                v-for="(artist, index) in player.currentSongDetail.artists"
+                :key="artist.id"
+                @click="TurnIn(artist.id)"
+              >
+                {{ artist.name
+                }}<span v-if="index < player.currentSongDetail.artists.length - 1"> / </span></span
+              >
             </div>
           </div>
           <div class="track-actions">
@@ -116,7 +122,7 @@
               max="1"
               step="0.01"
               @input="onVolume"
-              v-model.number="player.audio.volume"
+              v-model.number="volume"
               :style="{ '--progress': player.audio.volume * 100 + '%' }"
             />
           </div>
@@ -241,6 +247,7 @@ onMounted(() => {
   volume.value = player.audiovolume ?? 1
   if (audio) {
     // 初始化状态
+    audio.volume = volume.value
     duration.value = player.currentSongDetail.duration || audio.duration || 0
     currentTime.value = player.currentSongTime || 0
     seekValue.value = currentTime.value
@@ -299,7 +306,7 @@ const waitForLyricsLoaded = async () => {
   // 确保有歌词数据
   if (lyricLines.value.length === 0) {
     // 没有歌词，滚动到中间显示"纯音乐"
-   setTimeout(() => scrollToActive('smooth'), 100)
+    setTimeout(() => scrollToActive('smooth'), 100)
   }
 }
 // 监听歌曲切换（强制重置状态）
@@ -476,22 +483,21 @@ function formatTime(s: number) {
   return `${m}:${sec}`
 }
 function onVolume() {
+  if (player.audio) player.audio.volume = volume.value
   if (volume.value > 0) prevVolume.value = volume.value
 }
 watch(volume, (v) => {
   player.audiovolume = v
   if (player.audio) player.audio.volume = player.audiovolume
-  
-  
 })
 
 const TurnIn = (artistid) => {
   pageCtrl.ShowLyric = false
-  router.push({name: 'artist', params: { id: artistid } } )
+  router.push({ name: 'artist', params: { id: artistid } })
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 /* ================= 全局容器 ================= */
 .player-page {
   position: fixed;
@@ -626,8 +632,8 @@ const TurnIn = (artistid) => {
   border-radius: 8px;
   transition: color 0.5s;
   &:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 }
 .icon-btn {
   background: transparent;
@@ -640,14 +646,16 @@ const TurnIn = (artistid) => {
   border-radius: 4px;
   transition: color 0.5s;
   &:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 }
-.icon-btn, .like-btn:hover {
+.icon-btn,
+.like-btn:hover {
   color: #fff;
   transform: scale(1.1);
 }
-.icon-btn, .like-btn:active {
+.icon-btn,
+.like-btn:active {
   transform: scale(0.95);
 }
 
@@ -702,7 +710,6 @@ const TurnIn = (artistid) => {
 
 /* 底部控制区 */
 .controls-row {
-
   justify-content: center;
   align-items: center;
 }
@@ -827,6 +834,15 @@ const TurnIn = (artistid) => {
     padding: 20px;
     overflow-y: auto;
     display: block; /* 转为块级布局 */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    &::-webkit-scrollbar {
+      display: none;
+      width: 0 !important;
+      height: 0 !important;
+    }
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
   .left-column {
     height: auto;

@@ -68,16 +68,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watchEffect, watch } from 'vue'
-import { GetRecommendList } from '@/api/GetMusicList' // 确保路径正确
 import { MusicIdList } from '@/api/GetMusicFromList'
 import { Player } from '@/stores/index'
 import { useRouter } from 'vue-router'
-import { pagecontrol } from '@/stores/page'
 import { GetSearchData } from '@/api/Search'
 import { search } from '@/stores/search'
+
 const router = useRouter()
 const store = Player()
-const pagecontroler = pagecontrol()
 const searcher = search()
 interface Item {
   image: string

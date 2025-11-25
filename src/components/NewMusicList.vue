@@ -79,7 +79,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watchEffect } from 'vue'
-import { GetRecommendList, NewMusicList } from '@/api/GetMusicList' // 确保路径正确
+import { NewMusicList } from '@/api/GetMusicList' // 确保路径正确
 import { MusicIdList } from '@/api/GetMusicFromList'
 import { Player } from '@/stores/index'
 import { useRouter } from 'vue-router'

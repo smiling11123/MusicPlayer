@@ -40,7 +40,6 @@ import { useRouter } from 'vue-router'
 import { GetSearchData } from '@/api/Search'
 import { search } from '@/stores/search'
 import { GetMusicDetail } from '@/api/GetMusic'
-import { Song } from '@/stores/index'
 
 interface Artist {
   id: number

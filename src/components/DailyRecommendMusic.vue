@@ -80,12 +80,9 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Player } from '@/stores/index'
-import { NButton } from 'naive-ui'
-import { GetMusicFromList } from '@/api/GetMusicFromList'
-import type { Song, Playlist } from '@/stores/index'
-import { GetArtist } from '@/api/Artist'
+import type { Song } from '@/stores/index'
 import { GetMusicDetail } from '@/api/GetMusic'
-import { GetDailyRecommendMusic, GetRecommendDj } from '@/api/GetMusicList'
+import { GetDailyRecommendMusic } from '@/api/GetMusicList'
 
 const playerStore = Player()
 const route = useRoute()

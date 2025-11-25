@@ -78,12 +78,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { NSplit } from 'naive-ui'
 import { pagecontrol } from '@/stores/page'
 import { defineAsyncComponent } from 'vue'
-import Login from '@/components/Login.vue'
 const Topbar = defineAsyncComponent(() => import('@/components/TopBar.vue'))
 const Touchbar = defineAsyncComponent(() => import('./components/TouchBar.vue'))
 const Homepage = defineAsyncComponent(() => import('@/components/HomePage.vue'))

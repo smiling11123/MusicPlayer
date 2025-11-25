@@ -2,13 +2,11 @@ import {
   MusicUrl,
   GetMusicDetail,
   GetMusicLyric,
-  GetWordMusicLyric,
   UnblockMusicUrl,
 } from '@/api/GetMusic'
 import { defineStore } from 'pinia'
 import { computed, ComputedRef, ref } from 'vue'
 import { GetPersonalFM } from '@/api/GetMusicList'
-import { lyric } from '@neteaseapireborn/api'
 import { pagecontrol } from './page'
 export interface Song {
   id: number
@@ -18,15 +16,15 @@ export interface Song {
   duration: number
   cover: string
 }
-interface Artist {
+export interface Artist {
   id: number
   name: string
 }
 
-interface SongItem {
+export interface SongItem {
   id: number
   name: string
-  alias?: string // 歌曲别名（如：抖音DJ版）
+  alias?: string // 歌曲别名
   artists: Artist[]
   album: string
   cover: string
@@ -73,24 +71,62 @@ export const Player = defineStore(
       return playlist.value.findIndex((songId) => songId === currentSong.value)
     }) // 获取当前播放歌曲索引
 
-    const setupAudioListener = () => {
-      // 移除旧的监听器（防止重复添加）
-      audio.removeEventListener('ended', End.bind(this))
-      // 添加新监听器
-      audio.addEventListener('ended', End.bind(this))
-      // 监听错误
-      audio.addEventListener('error', (e) => {
-        console.error('音频加载错误:', e)
-        isplaying.value = false
-      })
+    const End = async () => {
+      if (playFM.value) {
+        const mappedFmSongs = ref()
+        if (currentSongIndex.value - playlist.value.length <= 3) {
+          const fmRes = await GetPersonalFM()
+
+          const fmList = fmRes.data
+          mappedFmSongs.value = fmList.map((song: any) => ({
+            id: song.id,
+            name: song.name,
+            album: song.album?.name,
+            artist: song.artists?.[0]?.name,
+            duration: Math.floor(song.duration / 1000),
+            cover: song.album?.picUrl,
+          }))
+          const idRes: any = mappedFmSongs.value
+
+          // 从响应中提取 id 列表（根据你的后端结构调整）
+          let ids: number[] = []
+          if (Array.isArray(idRes)) {
+            ids = idRes.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (Array.isArray(idRes?.ids)) {
+            ids = idRes.ids.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (Array.isArray(idRes?.data)) {
+            ids = idRes.data.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (idRes?.id) {
+            ids = [idRes.id]
+          }
+
+          if (!ids.length) {
+            console.error('No track ids returned from MusicIdList', idRes)
+            return
+          }
+          addSongsToPlaylist(ids)
+        }
+      }
+      await playNextSong() // 播放下一首歌曲
     }
+
+    audio.addEventListener('ended', End)
+    // 监听错误
+    audio.addEventListener('error', (e) => {
+      console.error('音频加载错误:', e)
+      audio.src = currentSongUrl.value.toString()
+      audio.load()
+      audio.currentTime = currentSongTime.value
+      audio.play()
+      //isplaying.value = false
+    })
     const play = async () => {
       if (currentSong.value && isplaying.value === false) {
         isplaying.value = true
         const urls = await MusicUrl({ id: currentSong.value })
         const url = currentSongUrl.value ?? urls[0].url
         audio.src = url
-        setupAudioListener()
+        //setupAudioListener()
         audio.load()
         audio.currentTime = currentSongTime.value
         audio.play()
@@ -132,12 +168,6 @@ export const Player = defineStore(
       const detail = data.value.songs[0] // 设置当前歌曲详细信息
       currentSongUrl.value = urls.value
       const url = currentSongUrl.value.toString()
-
-      audio.src = url // 设置音频源
-      currentSongTime.value = audio.currentTime
-      setupAudioListener() // 设置音频监听器
-      audio.load()
-      audio.play() // 播放音频
       currentSongLyric.value = lyric.value.lrc?.lyric
       currentSongTLyric.value = lyric.value.tlyric?.lyric || null
       //currentSongWordLyric.value = wordlyric
@@ -150,6 +180,12 @@ export const Player = defineStore(
         album: detail.al.name,
       }
       currentSong.value = id
+      audio.src = url // 设置音频源
+      currentSongTime.value = audio.currentTime
+      //setupAudioListener() // 设置音频监听器
+      audio.load()
+      audio.play() // 播放音频
+
       const nextIndex = currentSongIndex.value + 1
       console.log('current', currentSongIndex.value)
       console.log('next', nextIndex)
@@ -199,44 +235,7 @@ export const Player = defineStore(
       } finally {
       }
     }
-    const End = async () => {
-      if (playFM) {
-        const mappedFmSongs = ref()
-        if (currentSongIndex.value - playlist.value.length <= 3) {
-          const fmRes = await GetPersonalFM()
 
-          const fmList = fmRes.data
-          mappedFmSongs.value = fmList.map((song: any) => ({
-            id: song.id,
-            name: song.name,
-            album: song.album?.name,
-            artist: song.artists?.[0]?.name,
-            duration: Math.floor(song.duration / 1000),
-            cover: song.album?.picUrl,
-          }))
-          const idRes: any = mappedFmSongs.value
-
-          // 从响应中提取 id 列表（根据你的后端结构调整）
-          let ids: number[] = []
-          if (Array.isArray(idRes)) {
-            ids = idRes.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-          } else if (Array.isArray(idRes?.ids)) {
-            ids = idRes.ids.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-          } else if (Array.isArray(idRes?.data)) {
-            ids = idRes.data.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-          } else if (idRes?.id) {
-            ids = [idRes.id]
-          }
-
-          if (!ids.length) {
-            console.error('No track ids returned from MusicIdList', idRes)
-            return
-          }
-          addSongsToPlaylist(ids)
-        }
-      }
-      await playNextSong() // 播放下一首歌曲
-    }
     const addSongToPlaylist = async (songid, next) => {
       if (playlist.value.includes(songid)) {
         return

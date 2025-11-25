@@ -46,18 +46,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watchEffect, watch} from 'vue'
-import { GetRecommendList } from '@/api/GetMusicList' // 确保路径正确
 import { MusicIdList } from '@/api/GetMusicFromList'
 import { Player } from '@/stores/index'
 import { useRouter } from 'vue-router'
-import { pagecontrol } from '@/stores/page'
 import { GetSearchData } from '@/api/Search'
 import { search } from '@/stores/search'
 
 const searcher = search()
 const router = useRouter()
 const store = Player()
-const pagecontroler = pagecontrol()
 
 interface Item {
   image: string
@@ -158,7 +155,7 @@ const next = () => { if (currentPage.value < pageCount.value - 1) currentPage.va
 
 // 跳转详情
 const TurnIn = (item: Item) => {
-  router.push({ name: 'musiclist', params: { id: item.id } })
+  router.push({ name: 'searchmv', params: { id: item.id } })
 }
 
 async function play(item: Item) {

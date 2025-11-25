@@ -67,17 +67,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watchEffect, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watchEffect } from 'vue'
 import { MusicIdList } from '@/api/GetMusicFromList'
 import { Player } from '@/stores/index'
 import { useRouter } from 'vue-router'
-import { pagecontrol } from '@/stores/page'
-import { search } from '@/stores/search'
 import { HotArtist } from '@/api/Artist'
 const router = useRouter()
 const store = Player()
-const pagecontroler = pagecontrol()
-const searcher = search()
+
 interface Item {
   image: string
   name: string

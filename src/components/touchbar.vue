@@ -175,7 +175,7 @@
           min="0"
           max="1"
           step="0.01"
-          v-model.number="audio.volume"
+          v-model.number="volume"
           @input="onVolume"
           class="slider volume-slider"
           :style="{ '--progress': audio.volume * 100 + '%' }"
@@ -187,7 +187,7 @@
 
 <script setup lang="ts">
 // 逻辑部分保持原样，没有任何改动
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { Player } from '@/stores/index'
 import { pagecontrol } from '@/stores/page'
 import { GetPersonalFM } from '@/api/GetMusicList'
@@ -208,6 +208,7 @@ onMounted(() => {
   if (!audio) return
   store.isplaying = false
   volume.value = store.audiovolume ?? 1
+  audio.volume = volume.value
   duration.value = store.currentSongDetail.duration || 0
   currentTime.value = store.currentSongTime || 0
   seekValue.value = currentTime.value
@@ -256,6 +257,7 @@ function onSeek() {
   store.currentSongTime = seekValue.value
 }
 function onVolume() {
+  if (audio) audio.volume = volume.value
   if (volume.value > 0) prevVolume.value = volume.value
 }
 function muteToggle() {

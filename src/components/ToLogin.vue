@@ -118,7 +118,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage } from 'naive-ui'
 import { request } from '@/api/request'
 import type { AxiosResponse } from 'axios'
 import { CheckLoginStatus } from '@/api/Login'
@@ -169,7 +168,6 @@ interface UserAccountResponse {
 }
 
 const router = useRouter()
-const message = useMessage()
 const activeTab = ref<'qr' | 'phone' | 'cookie'>('qr')
 const pagecontroler = pagecontrol()
 
