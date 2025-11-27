@@ -14,6 +14,18 @@ import SearchAlbum from './SearchAlbum.vue'
 import SearchMV from './SearchMV.vue'
 import SearchMusicList from './SearchMusicList.vue'
 import SearchVideo from  './SearchVideo.vue'
+import { onMounted, watch } from 'vue'
+import { search } from '@/stores/search'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const searcher = search()
+
+onMounted(() =>{
+  if(searcher.keyword === '' ){
+      router.replace('/')
+  }
+})
 </script>
 
 <style scoped>

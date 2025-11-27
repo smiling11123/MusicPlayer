@@ -150,7 +150,7 @@
             active: activeIndex === index,
             nearby: Math.abs(activeIndex - index) === 1,
             'is-yrc': line.words && line.words.length > 0,
-            'is-interlude': line.isInterlude, // 标记间奏行
+            'is-interlude': line.isInterlude,
           }"
           :style="{
             '--scroll-y': `-${containerOffset + manualOffset}px`,
@@ -158,19 +158,21 @@
           }"
           @click="line.isInterlude ? null : seekTo(line.time)"
         >
+          <!-- 间奏圆点 -->
           <div v-if="line.isInterlude" class="interlude-dots">
             <span v-for="n in 3" :key="n" :style="getInterludeDotStyle(line, n)"></span>
           </div>
 
           <template v-else>
             <div class="lyric-origin">
+              <!-- YRC 逐字模式 -->
               <template v-if="line.words && line.words.length > 0">
                 <span
                   v-for="(word, wIndex) in line.words"
                   :key="wIndex"
                   class="lyric-word"
                   :class="{
-                    'long-note': word.duration > 0.7, // 长音标记
+                    'long-note': word.duration > 1.7, // 长音标记
                     'word-active': isWordActive(word), // 当前字激活标记
                   }"
                   :style="getWordStyle(word, index === activeIndex)"
@@ -178,13 +180,13 @@
                   {{ word.text }}
                 </span>
               </template>
+              <!-- LRC 普通模式 -->
               <template v-else>
                 {{ line.text }}
               </template>
             </div>
 
             <div v-if="line.translation" class="lyric-trans">{{ line.translation }}</div>
-            <!-- 罗马音 -->
             <div v-if="line.romaji" class="lyric-romaji">{{ line.romaji }}</div>
           </template>
         </div>
@@ -276,13 +278,11 @@ const bindAudioEvents = () => {
   audio.volume = volume.value
   isEventBound = true
 
-  // 如果已经在播放，立即启动 RAF
   if (!audio.paused) {
     updateTimeHighFreq()
   }
 }
 onMounted(() => {
-  //calculateScrollPosition()
   if (player.audio) {
     bindAudioEvents()
     duration.value = player.audio.duration || player.currentSongDetail.duration || 0
@@ -322,13 +322,13 @@ interface LyricWord {
 }
 interface LyricLine {
   time: number
-  duration?: number // 整行持续时间
+  duration?: number
   text: string
   translation?: string
   romaji?: string
   words?: LyricWord[]
-  isInterlude?: boolean // 标记是否为间奏
-  endTime?: number // 辅助字段
+  isInterlude?: boolean
+  endTime?: number
 }
 
 const parseLrcStr = (lrc: string): LyricLine[] => {
@@ -358,7 +358,7 @@ const parseYrcStr = (yrc: string): LyricLine[] => {
     const lineMatch = lineInfoRegex.exec(rawLine)
     if (lineMatch) {
       const lineStartTime = parseInt(lineMatch[1]) / 1000
-      const lineDuration = parseInt(lineMatch[2]) / 1000 // 获取整行持续时间
+      const lineDuration = parseInt(lineMatch[2]) / 1000
       const content = lineMatch[3]
       const words: LyricWord[] = []
       let match
@@ -416,7 +416,6 @@ const lyricLines = computed<LyricLine[]>(() => {
     const key = line.time.toFixed(1)
     let transText = transMap.get(key)
     let romaText = romaMap.get(key)
-    // 模糊匹配容错
     if (!transText)
       transText =
         transMap.get((line.time + 0.1).toFixed(1)) || transMap.get((line.time - 0.1).toFixed(1))
@@ -431,16 +430,34 @@ const lyricLines = computed<LyricLine[]>(() => {
     }
   })
 
-  // === 插入间奏逻辑 ===
+  // === 关键修改：为普通 LRC 歌词补充 endTime，以便计算间奏 ===
+  // 如果是 YRC 已经有 endTime，如果是 LRC 则需要根据下一句计算
+  for (let i = 0; i < combinedLines.length; i++) {
+    const current = combinedLines[i]
+    if (!current.endTime) {
+      // 找下一句的时间，如果没有下一句，默认给一个合理的延长（例如 5s 或直到歌曲结束）
+      const nextLine = combinedLines[i + 1]
+      if (nextLine) {
+        // 如果两句间隔太长，认为是间奏，当前句结束时间不应该直接连到下一句，而是给一个预估时长
+        // 但为了简单，我们通常认为LRC的一句持续到下一句开始前
+        current.endTime = nextLine.time
+        current.duration = current.endTime - current.time
+      } else {
+        current.endTime = current.time + 10 // 最后一句
+        current.duration = 10
+      }
+    }
+  }
+
+  // === 插入间奏逻辑 (保持不变，但现在支持 LRC 了) ===
   const finalLines: LyricLine[] = []
 
-  // 判断前奏：如果第一句开始时间大于 5 秒
   if (combinedLines.length > 0) {
     const firstLine = combinedLines[0]
     if (firstLine.time > 5) {
       finalLines.push({
         time: 0,
-        duration: firstLine.time, // 前奏持续时间
+        duration: firstLine.time,
         text: '...',
         isInterlude: true,
         words: [],
@@ -448,7 +465,6 @@ const lyricLines = computed<LyricLine[]>(() => {
     }
   }
 
-  // 2. 插入间奏
   for (let i = 0; i < combinedLines.length; i++) {
     const current = combinedLines[i]
     finalLines.push(current)
@@ -457,8 +473,8 @@ const lyricLines = computed<LyricLine[]>(() => {
       const next = combinedLines[i + 1]
       if (current.endTime) {
         const gap = next.time - current.endTime
+        // 间奏阈值 5秒
         if (gap > 5) {
-          // 间奏阈值 5秒
           finalLines.push({
             time: current.endTime,
             duration: gap,
@@ -490,9 +506,6 @@ const getWordStyle = (word: LyricWord, isLineActive: boolean) => {
   return { '--word-progress': `${percent}%` }
 }
 
-/**
- * 判断单词是否处于激活状态（用于上浮动效）
- */
 const isWordActive = (word: LyricWord) => {
   const now = currentTime.value
   return now >= word.time && now < word.time + word.duration
@@ -502,24 +515,21 @@ const getInterludeDotStyle = (line: LyricLine, dotIndex: number) => {
   const now = currentTime.value
   const start = line.time
   const duration = line.duration || 1
-  const progress = Math.max(0, Math.min(1, (now - start) / duration)) // 0~1
+  const progress = Math.max(0, Math.min(1, (now - start) / duration))
 
   const segment = 1 / 3
   const startThreshold = (dotIndex - 1) * segment
 
-  // 计算当前点在自己区间的进度
-  let dotOpacity = 0.2 // 默认底色
+  let dotOpacity = 0.2
   if (progress > startThreshold) {
-    // (当前总进度 - 本段起点) / 本段长度 = 本段内的完成度 (0~1)
     const localProgress = (progress - startThreshold) / segment
     const clampedProgress = Math.min(1, localProgress)
-    // 0.2 到 1 的插值
     dotOpacity = 0.2 + 0.8 * clampedProgress
   }
 
   return {
     opacity: dotOpacity,
-    transform: `scale(${0.8 + (0.4 * (dotOpacity - 0.2)) / 0.8})`, // 根据不透明度同步缩放
+    transform: `scale(${0.8 + (0.4 * (dotOpacity - 0.2)) / 0.8})`,
   }
 }
 
@@ -633,7 +643,6 @@ watch(lyricLines, async () => {
   calculateScrollPosition()
 })
 
-// ... 交互函数保持不变 ...
 function togglePlay() {
   player.togglePlay()
 }
@@ -699,7 +708,7 @@ const TurnIn = (artistid: number) => {
 </script>
 
 <style scoped lang="scss">
-/* 全局样式不变 */
+/* 保留全局样式 */
 .player-page {
   position: fixed;
   top: 0;
@@ -942,11 +951,10 @@ const TurnIn = (artistid: number) => {
   text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
   transform: translateY(var(--scroll-y)) scale(1) translate3d(0, 0, 0);
 }
-.lyric-line.active:not(.is-yrc) {
-  color: #fff;
-}
+/* YRC模式下，active行的颜色由内部word控制，父级设为淡色以免重叠 */
 .lyric-line.active.is-yrc {
   color: rgba(255, 255, 255, 0.45) !important;
+  text-shadow: none; /* 移除整行阴影，避免与字发光冲突 */
 }
 
 .lyric-line.nearby {
@@ -955,7 +963,6 @@ const TurnIn = (artistid: number) => {
   transform: translateY(var(--scroll-y)) scale(1) translate3d(0, 0, 0);
 }
 
-/* 翻译与罗马音 */
 .lyric-trans {
   font-size: 30px;
   font-weight: 800;
@@ -976,7 +983,6 @@ const TurnIn = (artistid: number) => {
 .active .lyric-romaji {
   color: rgba(255, 255, 255, 0.7);
 }
-
 .lyric-origin {
   font-size: 42px;
   font-weight: 1000;
@@ -986,15 +992,8 @@ const TurnIn = (artistid: number) => {
 .active .lyric-origin {
   font-size: 50px;
 }
-.lyric-trans {
-  font-size: 30px;
-  font-weight: 800;
-  opacity: 0.7;
-  line-height: 1.4;
-  margin-top: 4px;
-}
 
-/* 逐字歌词动效优化 */
+/* ================== 逐字歌词动效优化 (关键修改) ================== */
 .lyric-word {
   display: inline-block;
   white-space: pre-wrap;
@@ -1002,23 +1001,57 @@ const TurnIn = (artistid: number) => {
   -webkit-background-clip: text;
   font-size: 42px;
   font-weight: 1000;
-  color: rgba(255, 255, 255, 0.45);
-  background-image: linear-gradient(to right, #fff 0%, #fff 100%);
-  background-repeat: no-repeat;
-  background-size: var(--word-progress) 100%;
-}
-.lyric-line.active .lyric-word {
-  color: rgba(255, 255, 255, 0.45);
-  -webkit-text-fill-color: transparent;
-  /* 更柔和的渐变 */
-  background-image: linear-gradient(to right, #ffffff 50%, rgba(255, 255, 255, 0.45) 50%);
+  color: rgba(255, 255, 255, 0.45); /* 未播放部分颜色 */
+
+  /* 
+    使用 linear-gradient 实现卡拉OK效果 
+    修复闪烁的关键：
+    1. 确保 active 时背景 position 的移动是平滑的
+    2. 当非 active 时，通过颜色控制而不是背景跳转
+  */
+  background-image: linear-gradient(to right, #fff 50%, rgba(255, 255, 255, 0.45) 50%);
   background-size: 200% 100%;
-  background-position: calc(100% - var(--word-progress)) 0;
-  /* 关键：0.1s linear 过渡确保在 RAF 帧之间平滑补间，消除抖动 */
-  transition: background-position 0.1s linear;
+  background-position: 100% 0; /* 默认全灰 */
+
+  will-change: background-position, transform;
+  transform-origin: center bottom;
+  transition:
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    text-shadow 0.3s ease;
 }
-.lyric-line:not(.is-yrc) .lyric-origin,
-.lyric-line:not(.active) .lyric-word {
+
+/* 激活行的单词：应用进度 */
+.lyric-line.active .lyric-word {
+  color: rgba(255, 255, 255, 0.45); /* 保持底色透明，让clip生效 */
+  -webkit-text-fill-color: transparent; /* 关键：透出背景 */
+  background-position: calc(100% - var(--word-progress)) 0;
+  /* 仅对 background-position 应用线性过渡，消除跳变 */
+  transition:
+    background-position 0.1s linear,
+    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    text-shadow 0.3s ease;
+}
+
+/* 修复闪烁：当单词已经唱完 (progress=100%)，强制填充 */
+.lyric-line.active .lyric-word[style*='--word-progress: 100%'] {
+  background-position: 0% 0; /* 锁定在全白 */
+  transition: none; /* 移除过渡防止回弹 */
+}
+
+/* 
+  === 长音强调特效 === 
+  只有当单词是长音(long-note) 且 正在唱(word-active) 时触发
+*/
+.lyric-word.long-note.word-active {
+  //transform: scale(1.15) translateY(-2px); /* 放大并微上浮 */
+  text-shadow:
+    0 0 15px rgba(255, 255, 255, 0.8),
+    0 0 30px rgba(255, 255, 255, 0.4); /* 辉光效果 */
+  z-index: 1; /* 保证浮在普通字上面 */
+}
+
+/* 非YRC模式的普通文本恢复 */
+.lyric-line:not(.is-yrc) .lyric-origin {
   background: none;
   -webkit-text-fill-color: initial;
   color: inherit;

@@ -48,7 +48,7 @@
         <div v-for="(page, pi) in pages" :key="pi" class="slide">
           <div v-for="(item, idx) in page" :key="item.id" class="hq-item">
             <div class="hq-card" @click="TurnIn(item)">
-              <img :src="item.image" alt="" class="hq-img" loading="lazy" />
+              <img :src="item.image || null " alt="" class="hq-img" loading="lazy" />
               <button class="play-btn" @click.stop="play(item)">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                   <path d="M8 5v14l11-7z" />
@@ -57,7 +57,7 @@
             </div>
 
             <div class="meta">
-              <div class="meta-title">{{ item.title }}</div>
+              <div class="meta-title">{{ item.title  || null }}</div>
             </div>
           </div>
 
