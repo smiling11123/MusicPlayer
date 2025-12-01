@@ -162,13 +162,13 @@ export const Player = defineStore(
       if (audio) {
         audio.pause()
       }
-     
+
       const id = input.firstId || input
       const unblockurls = ref(null)
       //const preloadedId = ref()
       //preloadedId.value = nextSongDetail.value
       //console.log("preloadedId:",preloadedId.value.songs[0].id)
-      const canUsePreload = nextSongUrl.value && !ispre; //
+      const canUsePreload = nextSongUrl.value && !ispre //
       const urls = ref(null)
       const data = ref(null)
       const lyric = ref(null)
@@ -176,7 +176,7 @@ export const Player = defineStore(
       isplaying.value = true // 设置播放状态为 true
       console.log('nexturl', nextSongUrl.value)
       if (!canUsePreload) {
-        console.log("不使用预加载")
+        console.log('不使用预加载')
         const normalurl = await MusicUrl({ id: id })
         urls.value = normalurl[0].url
         if (urls.value === null) {
@@ -197,12 +197,12 @@ export const Player = defineStore(
         data.value = nextSongDetail.value
         lyric.value = nextSongLyric.value
         lrc.value = nextSongLrc.value
-        console.log('nextdetail',nextSongDetail.value)
-        console.log('data',data.value)
+        console.log('nextdetail', nextSongDetail.value)
+        console.log('data', data.value)
       }
       //const wordlyric = await GetWordMusicLyric(id)
       const detail = data.value.songs[0]
-      console.log("detail",detail)
+      console.log('detail', detail)
       // 设置当前歌曲详细信息
       currentSongUrl.value = urls.value
       const url = currentSongUrl.value.toString()
@@ -235,7 +235,7 @@ export const Player = defineStore(
         console.log('current', currentSongIndex.value)
         console.log('next', nextIndex)
         const nexturls = await MusicUrl({ id: playlist.value[nextIndex] })
-        console.log("nextid",playlist.value[nextIndex])
+        console.log('nextid', playlist.value[nextIndex])
         nextSongUrl.value = nexturls[0].url
         if (nexturls[0].url === null) {
           unblockurls.value = await UnblockMusicUrl(playlist.value[nextIndex]) // 获取歌曲 URL
@@ -290,7 +290,7 @@ export const Player = defineStore(
     }
 
     const addSongToPlaylist = async (songid, next) => {
-      if(playlist.value.includes(songid)){
+      if (playlist.value.includes(songid)) {
         return
         //如果歌曲已经存在就不再添加
       }
@@ -354,16 +354,16 @@ export const Player = defineStore(
       console.log(playlist.value.length)
       console.log(currentSongList.value.length)
       console.log(currentSongIndex.value)
+      const song = ref<number>(null)
       const currentIndex = currentSongIndex.value === -1 ? 0 : currentSongIndex.value
       const nextIndex = (currentIndex + 1) % playlist.value.length // 计算下一首歌曲索引
-      const song = playlist.value[nextIndex]
+      song.value = playlist.value[nextIndex]
       currentSongTime.value = 0
       audio.currentTime = currentSongTime.value
       console.log(playmodel.value)
       if (playmodel.value === 'onlyone') {
         const onlyonesong = playlist.value[currentIndex]
-        await playcurrentSong(onlyonesong)
-        return
+        song.value = onlyonesong
       } else if (playmodel.value === 'random') {
         console.log('israndom')
         let randomindex
@@ -373,10 +373,42 @@ export const Player = defineStore(
         const randomsong = playlist.value[randomindex]
         console.log(randomsong)
         console.log(randomindex)
-        await playcurrentSong(randomsong)
-        return
+        song.value = randomsong
       }
-      await playcurrentSong(song)
+      const mappedFmSongs = ref()
+      if (playFM) {
+        if (currentSongIndex.value - playlist.value.length <= 3) {
+          const fmRes = await GetPersonalFM()
+          const fmList = fmRes.data
+          mappedFmSongs.value = fmList.map((song) => ({
+            id: song.id,
+            name: song.name,
+            album: song.album?.name,
+            artist: song.artists?.[0]?.name,
+            duration: Math.floor(song.duration / 1000),
+            cover: song.album?.picUrl,
+          }))
+          const idRes = mappedFmSongs.value
+
+          let ids = []
+          if (Array.isArray(idRes)) {
+            ids = idRes.map((v) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (Array.isArray(idRes?.ids)) {
+            ids = idRes.ids.map((v) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (Array.isArray(idRes?.data)) {
+            ids = idRes.data.map((v) => (typeof v === 'object' ? (v.id ?? v) : v))
+          } else if (idRes?.id) {
+            ids = [idRes.id]
+          }
+
+          if (!ids.length) {
+            console.error('No track ids returned from MusicIdList', idRes)
+            return
+          }
+          await addSongsToPlaylist(ids)
+        }
+      }
+      playcurrentSong(song.value)
     }
     const randomplaymodel = () => {
       playmodel.value = playmodel.value === 'random' ? 'normal' : 'random'

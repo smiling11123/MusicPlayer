@@ -1,0 +1,28 @@
+directories:
+  output: release/${version}
+  buildResources: build
+appId: com.polomusic.app
+productName: polomusic
+copyright: Copyright © 2024 yb
+files:
+  - filter:
+      - dist/**/*
+      - net/**/*
+      - src/background.js
+      - src/electron/**/*
+      - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${productName}-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: true
+asar: true
+asarUnpack:
+  - '**/node_modules/node-windows/**/*'
+electronVersion: 39.2.3

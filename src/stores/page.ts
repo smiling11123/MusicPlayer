@@ -4,6 +4,7 @@ export const pagecontrol = defineStore('pagecontrol', () => {
   const ShowLyric = ref(false) //是否显示歌词页面
   const ShowPlayList = ref(false)
   const ShowAdditionRight = ref(false)
+  const ShowDeskLyric = ref(false)
   //IsLogin: false
   const ShowQRCode = ref(false)
   const IsLogin = ref(false)
@@ -14,17 +15,21 @@ export const pagecontrol = defineStore('pagecontrol', () => {
   const isShowPlayList = () => {
     ShowPlayList.value = !ShowPlayList.value
   }
-
+  const isShowDeskLyric = () => {
+    ShowDeskLyric.value = !ShowDeskLyric.value
+  }
 
   return {
     ShowLyric,
     ShowPlayList,
     ShowAdditionRight,
     ShowQRCode,
+    ShowDeskLyric,
     IsLogin,
     IsFold,
     isShowLyric,
     isShowPlayList,
+    isShowDeskLyric,
   }
 
 },
@@ -34,7 +39,8 @@ export const pagecontrol = defineStore('pagecontrol', () => {
       storage: localStorage,
       paths: [
         'IsLogin',
-        'IsFold'
+        'IsFold',
+        'ShowDeskLyric',
       ],
     } as any
 }

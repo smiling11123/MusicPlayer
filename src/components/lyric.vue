@@ -600,6 +600,7 @@ watch([activeIndex, isUserScrolling], () => {
   if (!isUserScrolling.value) {
     nextTick(() => {
       calculateScrollPosition()
+
       manualOffset.value = 0
     })
   }
@@ -647,34 +648,6 @@ function togglePlay() {
   player.togglePlay()
 }
 const next = async () => {
-  if (player.playFM) {
-    const mappedFmSongs = ref()
-    if (player.currentSongIndex - player.playlist.length <= 3) {
-      const fmRes = await GetPersonalFM()
-      const fmList = fmRes.data
-      mappedFmSongs.value = fmList.map((song: any) => ({
-        id: song.id,
-        name: song.name,
-        album: song.album?.name,
-        artist: song.artists?.[0]?.name,
-        duration: Math.floor(song.duration / 1000),
-        cover: song.album?.picUrl,
-      }))
-      const idRes: any = mappedFmSongs.value
-      let ids: number[] = []
-      if (Array.isArray(idRes)) {
-        ids = idRes.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-      } else if (Array.isArray(idRes?.ids)) {
-        ids = idRes.ids.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-      } else if (Array.isArray(idRes?.data)) {
-        ids = idRes.data.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-      } else if (idRes?.id) {
-        ids = [idRes.id]
-      }
-      if (!ids.length) return
-      player.addSongsToPlaylist(ids)
-    }
-  }
   player.playNextSong && player.playNextSong()
 }
 function prev() {

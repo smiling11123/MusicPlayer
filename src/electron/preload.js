@@ -12,4 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   remove_toggle: (callback) => ipcRenderer.removeListener('global-toggle-play', callback),
   remove_next: (callback) => ipcRenderer.removeListener('global-next', callback),
   remove_prev: (callback) => ipcRenderer.removeListener('global-prev', callback),
+  toggleDesktopLyric: () => ipcRenderer.send('toggle-desktop-lyric'),
+  sendLyricUpdate: (data) => ipcRenderer.send('update-lyric-info', data),
+  setIgnoreMouse: (ignore) => ipcRenderer.send('set-ignore-mouse-events', ignore),
+  onLyricUpdate: (callback) => ipcRenderer.on('on-lyric-update', callback),
+  removeLyricListener: (callback) => ipcRenderer.removeListener('on-lyric-update', callback)
 })

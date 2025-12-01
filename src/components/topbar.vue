@@ -154,6 +154,10 @@ const pagecontroler = pagecontrol()
 const isUserMenuOpen = ref(false)
 const userMenuContainer = ref<HTMLDivElement>()
 
+
+const opendesklyric = () => {
+   window.electronAPI.toggleDesktopLyric()
+}
 const minimize = () => {
   window.electronAPI?.minimize?.()
 }
@@ -165,6 +169,7 @@ const toggleMax = async () => {
 
 const Fold = () => {
   pagecontroler.IsFold = !pagecontroler.IsFold
+  //opendesklyric()
 }
 
 const close = () => {

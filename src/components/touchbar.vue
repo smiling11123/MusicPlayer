@@ -33,9 +33,9 @@
       </div>
     </div>
 
-    <div class="center-area" >
+    <div class="center-area">
       <div class="controls-row">
-        <button class="ctrl-btn secondary" @click="prev"    title="上一首">
+        <button class="ctrl-btn secondary" @click="prev" title="上一首">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
             <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
           </svg>
@@ -199,7 +199,7 @@ const currentTime = ref(0)
 const duration = ref(0)
 const seekValue = ref(0)
 const seeking = ref(false)
-const volume = ref(player.audiovolume ?? 1) 
+const volume = ref(player.audiovolume ?? 1)
 const prevVolume = ref(volume ?? 1)
 
 // 标记事件是否已绑定，防止重复绑定
@@ -224,7 +224,7 @@ const bindAudioEvents = () => {
   audio.addEventListener('error', (e) => {
     console.error('audio error', e, audio.src)
   })
-  
+
   audio.volume = volume.value
   isEventBound = true
 }
@@ -233,59 +233,59 @@ const handlekey = (event) => {
   const ctrl = event.ctrlKey
   const shift = event.shiftKey
   const alt = event.altKey
-  if(event.key === 'ArrowRight' && ctrl) {
+  if (event.key === 'ArrowRight' && ctrl) {
     next()
   }
-  if(event.key === 'ArrowLeft' && ctrl) {
+  if (event.key === 'ArrowLeft' && ctrl) {
     prev()
   }
-  if(event.key === 'p' && ctrl) {
+  if (event.key === 'p' && ctrl) {
     togglePlay()
   }
-  if(event.key === 'ArrowUp' && ctrl) {
-    
+  if (event.key === 'ArrowUp' && ctrl) {
   }
 }
 
-
 onMounted(() => {
   if (player.audio) {
-    if(player.audio.paused){
+    if (player.audio.paused) {
       player.isplaying = false
     }
     bindAudioEvents()
-    window.addEventListener('keyup', handlekey);
+    window.addEventListener('keyup', handlekey)
     duration.value = player.audio.duration || player.currentSongDetail.duration || 0
     currentTime.value = player.audio.currentTime || player.currentSongTime || 0
     seekValue.value = currentTime.value
   }
 })
 
-
 watch(
   () => player.audio,
   (newAudio) => {
     if (newAudio) {
-      isEventBound = false 
+      isEventBound = false
       bindAudioEvents()
       duration.value = newAudio.duration || 0
       currentTime.value = player.currentSongTime || 0
       newAudio.currentTime = currentTime.value
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
-watch(() => player.currentSongDetail, (newVal) => {
-  if (newVal) {
-    nextTick(() => {
+watch(
+  () => player.currentSongDetail,
+  (newVal) => {
+    if (newVal) {
+      nextTick(() => {
         const audio = player.audio
-        if(audio) {
-            duration.value = audio.duration || newVal.duration || 0
+        if (audio) {
+          duration.value = audio.duration || newVal.duration || 0
         }
-    })
-  }
-})
+      })
+    }
+  },
+)
 
 watch(volume, (v) => {
   player.audiovolume = v
@@ -331,39 +331,6 @@ function prev() {
   if (player.playlist?.length) player.playPrevSong ? player.playPrevSong() : player.playNextSong()
 }
 const next = async () => {
-  const mappedFmSongs = ref()
-  if (player.playFM) {
-    if (player.currentSongIndex - player.playlist.length <= 3) {
-      const fmRes = await GetPersonalFM()
-      const fmList = fmRes.data
-      mappedFmSongs.value = fmList.map((song: any) => ({
-        id: song.id,
-        name: song.name,
-        album: song.album?.name,
-        artist: song.artists?.[0]?.name,
-        duration: Math.floor(song.duration / 1000),
-        cover: song.album?.picUrl,
-      }))
-      const idRes: any = mappedFmSongs.value
-
-      let ids: number[] = []
-      if (Array.isArray(idRes)) {
-        ids = idRes.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-      } else if (Array.isArray(idRes?.ids)) {
-        ids = idRes.ids.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-      } else if (Array.isArray(idRes?.data)) {
-        ids = idRes.data.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-      } else if (idRes?.id) {
-        ids = [idRes.id]
-      }
-
-      if (!ids.length) {
-        console.error('No track ids returned from MusicIdList', idRes)
-        return
-      }
-      await player.addSongsToPlaylist(ids)
-    }
-  }
   player.playNextSong()
 }
 
@@ -377,7 +344,6 @@ const Onlyoneplaymodel = () => {
   player.onlyoneplaymodel()
 }
 </script>
-
 
 <style scoped>
 /* 布局核心：Grid 布局 
@@ -571,7 +537,7 @@ button:focus {
   width: 100%;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1); 
+  background: rgba(255, 255, 255, 0.1);
   outline: none;
   cursor: pointer;
   position: relative;

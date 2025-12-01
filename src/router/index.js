@@ -9,6 +9,7 @@ import WholeNewSongs from '@/components/WholeNewSongs.vue'
 import WholeSearchSongs from '@/components/WholeSearchSongs.vue'
 import MV from '@/components/MV.vue'
 import Video from '@/components/Video.vue'
+import deskLyric from '@/components/deskLyric.vue'
 const routes = [
   {
     path: '/',
@@ -75,10 +76,19 @@ const routes = [
     name: 'searchmv',
     component: MV,
   },
-    {
+  {
     path: '/SearchResult/video/:id',
     name: 'searchvideo',
     component: Video,
+  },
+  {
+    path: '/desktop-lyric',
+    name: 'DesktopLyric',
+    component: deskLyric,
+    meta: { 
+      title: '桌面歌词' ,
+      isDeskLyric: true,
+    },
   },
 ]
 

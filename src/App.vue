@@ -77,13 +77,14 @@
   </transition>
 </template>
 
-<script setup>
+<script setup ">
 import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { NSplit } from 'naive-ui'
 import { pagecontrol } from '@/stores/page'
 import { defineAsyncComponent } from 'vue'
 import { Player } from './stores/index'
+import { GetPersonalFM } from './api/GetMusicList'
 const Topbar = defineAsyncComponent(() => import('@/components/TopBar.vue'))
 const Touchbar = defineAsyncComponent(() => import('./components/TouchBar.vue'))
 const Homepage = defineAsyncComponent(() => import('@/components/HomePage.vue'))
@@ -104,15 +105,15 @@ const cachedComponents = ref([
 ])
 
 const handleGlobaltoggle = () => {
-  console.log('Renderer received global-toggle-play')
+  
   player.togglePlay()
 }
-const handleGlobalnext = () => {
-  console.log('Renderer received global-next')
+const handleGlobalnext = async () => {
+  
   player.playNextSong()
 }
 const handleGlobalprev = () => {
-  console.log('Renderer received global-prev')
+  
   player.playPrevSong()
 }
 
