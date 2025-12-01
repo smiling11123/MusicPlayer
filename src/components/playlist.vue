@@ -1,48 +1,92 @@
 <template>
   <div class="Show-PlayList" v-if="player.playlist.length">
     <div class="song-list-wrapper">
-      <ul class="song-list">
-        <li
-          v-for="(song, index) in songs"
-          :key="song.id"
-          class="song-item"
-          :class="{ playing: currentSongId === song.id }"
-        >
-          <div class="item-content">
-            <div class="index-container">
-              <span class="index-num" v-if="currentSongId !== song.id">{{ index + 1 }}</span>
-              <div class="playing-icon" v-else><span></span><span></span><span></span></div>
-            </div>
-
-            <div class="cover-container" @click="playSong(song, index)">
-              <img :src="song.cover + '?param=60y60'" alt="cover" loading="lazy" />
-              <div class="play-mask">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-            </div>
-
-            <div class="info-container">
-              <div class="song-title" :title="song.name">
-                {{ truncateText(song.name, 9) }}
+      <draggable
+        v-model="playlistData"
+        item-key="id"
+        tag="ul"
+        class="song-list"
+        animation="300"
+        ghost-class="ghost-item"
+        handle=".draggable-btn"
+      >
+        <template #item="{ element: song, index }">
+          <li class="song-item" :class="{ playing: currentSongId === song.id }">
+            <div class="item-content">
+              <div class="index-container">
+                <span class="index-num" v-if="currentSongId !== song.id">{{ index + 1 }}</span>
+                <div class="playing-icon" v-else><span></span><span></span><span></span></div>
               </div>
 
-              <div class="song-meta">
-                <span
-                  v-for="(artist, index) in song.artists"
-                  :key="artist.id"
-                  @click="TurnIn(artist.id)"
-                >
-                  {{ artist.name }}<span v-if="index < song.artists.length - 1"> / </span>
-                </span>
+              <div class="cover-container" @click="playSong(song, index)">
+                <img :src="song.cover + '?param=60y60'" alt="cover" loading="lazy" />
+                <div class="play-mask">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+
+              <div class="info-container">
+                <div class="song-title" :title="song.name">
+                  {{ truncateText(song.name, 9) }}
+                </div>
+
+                <div class="song-meta">
+                  <span
+                    v-for="(artist, index) in song.artists"
+                    :key="artist.id"
+                    @click.stop="TurnIn(artist.id)"
+                  >
+                    {{ artist.name }}<span v-if="index < song.artists.length - 1"> / </span>
+                  </span>
+                </div>
+              </div>
+              <div class="remove">
+                <button class="remove-btn" @click="player.removeSongFromPlaylist(song.id)">
+                  <svg
+                    t="1764587886144"
+                    class="icon"
+                    viewBox="0 0 1024 1024"
+                    version="1.1"
+                    xmlns="http://www.w3.org/2000/svg"
+                    p-id="3545"
+                    width="15"
+                    height="15"
+                  >
+                    <path
+                      d="M514.816 53.312h-2.752c-21.504 0-39.808 0-55.04 1.408a116.672 116.672 0 0 0-45.568 12.352c-5.76 3.008-11.2 6.528-16.32 10.496a116.608 116.608 0 0 0-30.144 36.352c-7.552 13.248-15.168 29.888-24.128 49.536l-17.856 39.232H128a32 32 0 0 0 0 64h32V832A160 160 0 0 0 320 992h384a160 160 0 0 0 160-160V266.688h32a32 32 0 0 0 0-64h-190.912l-20.992-43.264c-9.152-18.944-16.896-35.008-24.576-47.744a116.608 116.608 0 0 0-30.208-35.072 117.376 117.376 0 0 0-16.064-10.112 116.608 116.608 0 0 0-44.736-11.84c-14.784-1.28-32.64-1.28-53.696-1.28zM800 266.688V832a96 96 0 0 1-96 96H320A96 96 0 0 1 224 832V266.688h576z m-166.016-64h-240.64l5.184-11.456c9.664-21.184 16.064-35.2 22.016-45.568a54.144 54.144 0 0 1 13.568-17.28 53.312 53.312 0 0 1 7.424-4.8 54.144 54.144 0 0 1 21.312-5.12c11.968-1.088 27.328-1.152 50.624-1.152 22.72 0 37.76 0 49.344 1.088 11.072 0.96 16.704 2.752 20.928 4.928 2.56 1.28 4.992 2.88 7.36 4.608 3.776 2.816 7.808 7.168 13.504 16.64 6.016 10.048 12.608 23.488 22.528 43.968l6.848 14.08z"
+                      fill="#fff"
+                      p-id="3546"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="duration">{{ formatTime(song.duration) }}</div>
+              <div class="draggable" title="拖动">
+                <button class="draggable-btn">
+                  <svg
+                    t="1764585483030"
+                    class="icon"
+                    viewBox="0 0 1024 1024"
+                    version="1.1"
+                    xmlns="http://www.w3.org/2000/svg"
+                    p-id="2529"
+                    width="15"
+                    height="15"
+                  >
+                    <path
+                      d="M153.6 237.056a32.256 32.256 0 0 1 0-64h716.8a32.256 32.256 0 0 1 0 64z m0 307.2a32.256 32.256 0 0 1 0-64h716.8a32.256 32.256 0 0 1 0 64z m0 307.2a32.256 32.256 0 0 1 0-64h716.8a32.256 32.256 0 0 1 0 64z"
+                      fill="#fff"
+                      p-id="2530"
+                    ></path>
+                  </svg>
+                </button>
               </div>
             </div>
-
-            <div class="duration">{{ formatTime(song.duration) }}</div>
-          </div>
-        </li>
-      </ul>
+          </li>
+        </template>
+      </draggable>
     </div>
   </div>
 
@@ -57,13 +101,24 @@
 import { Player } from '@/stores/index'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import draggable from 'vuedraggable'
 import type { SongItem } from '@/stores/index'
 
-const playerStore = Player()
 const router = useRouter()
 const player = Player()
-const currentSongId = computed(() => playerStore.currentSong)
-const songs = computed(() => playerStore.currentSongList)
+
+const currentSongId = computed(() => player.currentSong)
+
+const playlistData = computed({
+  get: () => player.currentSongList,
+
+  set: (newArray: SongItem[]) => {
+    player.nextSongUrl = null
+    player.currentSongList = newArray
+
+    player.playlist = newArray.map((s) => s.id)
+  },
+})
 
 function truncateText(text: string, maxLength: number): string {
   if (!text) return ''
@@ -79,9 +134,8 @@ function formatTime(seconds: number): string {
 }
 
 function playSong(song: SongItem, index: number) {
-  //playerStore.addWholePlaylist(songs.value.map((s) => s.id))
-  playerStore.nextSongUrl = null
-  playerStore.playcurrentSong(song.id)
+  player.nextSongUrl = null
+  player.playcurrentSong(song.id)
 }
 const TurnIn = (artistid) => {
   router.push({ name: 'artist', params: { id: artistid } })
@@ -98,79 +152,80 @@ $text-sub: rgba(255, 255, 255, 0.5);
 $text-hover: #ffffff;
 $radius: 10px;
 $bg-dark: #1c1c1e;
+
+.ghost-item {
+  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
 .Show-PlayList {
   width: 100%;
   height: 100%;
-  background-color: $bg-dark; // 强制深色背景
-  color: $text-main; // 确保文本颜色
+  background-color: $bg-dark;
+  color: $text-main;
 }
+
 // --- 滚动容器 ---
 .song-list-wrapper {
   max-width: 100%;
   height: 100%;
-  padding: 0 8px; // 给滚动条留一点内边距防止贴边
+  padding: 0 8px;
   user-select: none;
-
-  // 允许 Y 轴滚动
   overflow-y: auto;
   overflow-x: hidden;
 
-  // --- 隐藏滚动条核心代码 ---
-  // Chrome, Safari, Edge
   &::-webkit-scrollbar {
     display: none;
     width: 0 !important;
     height: 0 !important;
   }
-  // Firefox
   scrollbar-width: none;
-  // IE
   -ms-overflow-style: none;
 }
 
 // --- 列表样式 ---
 .song-list {
-  // 清除原生 ul 样式
   list-style: none;
   margin: 0;
   padding: 0;
   width: 100%;
 }
 
-// --- 列表项样式 ---
+// --- 列表项样式 (保持原样) ---
 .song-item {
-  display: block; // 确保 li 占满一行
+  display: block;
   width: 100%;
   padding: 0;
   background: transparent;
   border-radius: $radius;
   margin-bottom: 4px;
   margin-top: 4px;
-  transition: all 0.2s ease;
-  cursor: pointer; // 添加手型光标
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s;
+  cursor: auto;
 
-  // 悬停效果
   &:hover {
     background-color: $bg-hover;
     .item-content {
       .index-container .index-num {
-        opacity: 0.5;
+        opacity: 0.8;
       }
       .cover-container .play-mask {
         opacity: 1;
       }
     }
+    .remove-btn{
+      opacity: 1;
+    }
   }
 
-  // 点击/激活态
-  &:active {
-    transform: scale(0.99);
-  }
-
-  // 播放中状态
   &.playing {
     background-color: $bg-active;
-
+    .remove-btn {
+      opacity: 1;
+    }
     .song-title {
       color: $primary-color;
       font-weight: 600;
@@ -181,7 +236,6 @@ $bg-dark: #1c1c1e;
   }
 }
 
-// --- 内容布局 (保持原有逻辑) ---
 .item-content {
   display: flex;
   align-items: center;
@@ -251,12 +305,12 @@ $bg-dark: #1c1c1e;
   flex-shrink: 0;
   margin-right: 16px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-
+  cursor: pointer;
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block; // 消除图片底部幽灵间隙
+    display: block;
   }
 
   .play-mask {
@@ -331,7 +385,44 @@ $bg-dark: #1c1c1e;
   margin-left: 16px;
   flex-shrink: 0;
 }
+.draggable {
+  padding-left: 8px;
+  padding-right: 2px;
+}
+.draggable-btn {
+  background: none;
+  width: 25px;
+  height: 25px;
+  border: none;
+  color: #fff;
+  cursor: grab;
+  border-radius: 8px;
+  transition: color 0.2s;
+  -webkit-app-region: no-drag;
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  &:active {
+    cursor: grabbing;
+  }
+}
 
+.remove-btn{
+  background: none;
+  opacity: 0;
+  width: 25px;
+  height: 25px;
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  transition: color 0.2s;
+  -webkit-app-region: no-drag;
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    
+  }
+  
+}
 // --- 空状态 ---
 .Inshow-PlayList {
   display: flex;
@@ -348,7 +439,6 @@ $bg-dark: #1c1c1e;
   }
 }
 
-// --- 响应式 ---
 @media (max-width: 600px) {
   .item-content {
     padding: 8px;

@@ -8,7 +8,6 @@ import {
 import { defineStore } from 'pinia'
 import { computed, ComputedRef, ref } from 'vue'
 import { GetPersonalFM } from '@/api/GetMusicList'
-import { pagecontrol } from './page'
 import { userInfo } from './userInfo'
 export interface Song {
   id: number
@@ -31,6 +30,7 @@ export interface SongItem {
   album: string
   cover: string
   duration?: number
+  fee?: number
 }
 export interface Playlist {
   id: number
@@ -56,7 +56,7 @@ export const Player = defineStore(
     const playlist = ref<number[]>([]) // 播放列表
     const playmodel = ref('')
     const currentSong = ref<number | null>(null) // 当前播放的歌曲
-    const currentSongUrl = ref<String | null>(null)
+    const currentSongUrl = ref<string | null>(null)
     const currentSongTime = ref<number>(0) //上次播放位置
     const currentSongLyric = ref<string>(null)
     const currentSongYrc = ref<string>(null)
@@ -66,11 +66,10 @@ export const Player = defineStore(
     const useCookie = ref<String | null>(null)
     const currentSongDetail = ref<SongItem>(null)
     const nextSongDetail = ref<SongItem>(null)
-    const nextSongUrl = ref<String | null>(null)
+    const nextSongUrl = ref<string | null>(null)
     const currentSongList = ref<SongItem[]>([])
     const nextSongLyric = ref<string>(null)
     const nextSongLrc = ref<string>(null)
-    const pagecontroler = pagecontrol()
     const userinfo = userInfo()
     const currentSongIndex: ComputedRef<number> = computed(() => {
       if (currentSong.value === null) return -1
@@ -122,14 +121,25 @@ export const Player = defineStore(
       console.error('音频加载错误:', e)
       const reloadurl = ref(null)
       const reloadurlUnblock = ref(null)
-      const normalurl = await MusicUrl({ id: currentSongDetail.value.id })
+      const reloadnexturl = ref(null)
+      const normalurl = await MusicUrl({ id: playlist.value[currentSongIndex.value] })
+      const nextindex = currentSongIndex.value + 1
       reloadurl.value = normalurl[0].url
       if (reloadurl.value === null) {
-        reloadurlUnblock.value = await UnblockMusicUrl(currentSongDetail.value.id)
+        reloadurlUnblock.value = await UnblockMusicUrl(playlist.value[currentSongIndex.value])
         reloadurl.value = reloadurlUnblock.value.data.url // 获取歌曲 URL
       }
-      audio.src = reloadurl.value
-      audio.load()
+      reloadnexturl.value = await MusicUrl({ id: playlist.value[nextindex] })
+      nextSongUrl.value = reloadnexturl.value[0].url
+      if (
+        nextSongUrl.value === null ||
+        ((currentSongDetail.value.fee === 1 || 4) && userinfo.viptype === 0)
+      ) {
+        reloadnexturl.value = await UnblockMusicUrl(playlist.value[nextindex])
+        nextSongUrl.value = reloadnexturl.value.data.url
+      }
+      audio.src = reloadurl.value.toString()
+      await audio.load()
       audio.currentTime = currentSongTime.value
       audio.play()
       //isplaying.value = false
@@ -141,24 +151,32 @@ export const Player = defineStore(
         const url = currentSongUrl.value ?? urls[0].url
         audio.src = url
         //setupAudioListener()
-        audio.load()
+        await audio.load()
         audio.currentTime = currentSongTime.value
         audio.play()
       }
     }
 
-    //采用预加载下一首歌曲来降低请求带来的延迟
+    //采用预加载下一首歌曲来降低请求带来的延迟 , ispre: 上一首或者切换播放列表（不是执行下一首的操作）
     const playcurrentSong = async (input, ispre = false) => {
+      if (audio) {
+        audio.pause()
+      }
+     
       const id = input.firstId || input
       const unblockurls = ref(null)
-
+      //const preloadedId = ref()
+      //preloadedId.value = nextSongDetail.value
+      //console.log("preloadedId:",preloadedId.value.songs[0].id)
+      const canUsePreload = nextSongUrl.value && !ispre; //
       const urls = ref(null)
       const data = ref(null)
       const lyric = ref(null)
       const lrc = ref(null)
       isplaying.value = true // 设置播放状态为 true
       console.log('nexturl', nextSongUrl.value)
-      if (nextSongUrl.value === null || ispre === true) {
+      if (!canUsePreload) {
+        console.log("不使用预加载")
         const normalurl = await MusicUrl({ id: id })
         urls.value = normalurl[0].url
         if (urls.value === null) {
@@ -167,7 +185,7 @@ export const Player = defineStore(
         }
         // 获取歌曲详细信息
         data.value = await GetMusicDetail({ ids: id })
-        if ((data.value.fee === '1' || '4') && userinfo.viptype === 0) {
+        if ((data.value.fee === '1' || data.value.fee === '4') && userinfo.viptype === 0) {
           const freeurl = await UnblockMusicUrl(id)
           urls.value = freeurl.data.url
         }
@@ -179,15 +197,18 @@ export const Player = defineStore(
         data.value = nextSongDetail.value
         lyric.value = nextSongLyric.value
         lrc.value = nextSongLrc.value
+        console.log('nextdetail',nextSongDetail.value)
+        console.log('data',data.value)
       }
       //const wordlyric = await GetWordMusicLyric(id)
       const detail = data.value.songs[0]
+      console.log("detail",detail)
       // 设置当前歌曲详细信息
       currentSongUrl.value = urls.value
       const url = currentSongUrl.value.toString()
       currentSongLyric.value = lyric.value.lrc?.lyric
       currentSongTLyric.value = lyric.value.tlyric?.lyric || null
-      currentSongYrc.value = lrc.value.yrc?.lyric  || null//逐字
+      currentSongYrc.value = lrc.value.yrc?.lyric || null //逐字
       currentSongTYrc.value = lrc.value.ytlrc?.lyric || null // 翻译
       currentSongRoMaYrc.value = lrc.value.romalrc?.lyric || null //罗马音
       //currentSongWordLyric.value = wordlyric
@@ -198,38 +219,43 @@ export const Player = defineStore(
         cover: detail.al.picUrl,
         duration: detail.dt ? Math.floor(detail.dt / 1000) : 0,
         album: detail.al.name,
+        fee: detail.fee,
       }
       currentSong.value = id
       audio.src = url // 设置音频源
       currentSongTime.value = 0 //audio.currentTime
       audio.currentTime = 0
       //setupAudioListener() // 设置音频监听器
-      audio.load()
-      audio.play() // 播放音频
+      await audio.load()
+      await audio.play() // 播放音频
       const nextIndex = currentSongIndex.value + 1
-      if (nextIndex <= currentSongList.value.length - 1) {
+      console.log('预加载', nextIndex)
+      if (nextIndex <= playlist.value.length - 1) {
         const nextdata = ref(null)
         console.log('current', currentSongIndex.value)
         console.log('next', nextIndex)
         const nexturls = await MusicUrl({ id: playlist.value[nextIndex] })
+        console.log("nextid",playlist.value[nextIndex])
         nextSongUrl.value = nexturls[0].url
         if (nexturls[0].url === null) {
           unblockurls.value = await UnblockMusicUrl(playlist.value[nextIndex]) // 获取歌曲 URL
           nextdata.value = unblockurls.value.data.url
           nextSongUrl.value = nextdata.value
         }
-        data.value = await GetMusicDetail({ ids: playlist.value[nextIndex] }) // 获取歌曲详细信息
-        if ((data.value.fee === '1' || '4') && userinfo.viptype === 0) {
-          const freeurl = await UnblockMusicUrl(id)
+        nextSongDetail.value = await GetMusicDetail({ ids: playlist.value[nextIndex] }) // 获取歌曲详细信息
+        if ((data.value.fee === '1' || data.value.fee === '4') && userinfo.viptype === 0) {
+          const freeurl = await UnblockMusicUrl(playlist.value[nextIndex])
           nextdata.value = freeurl.data.url
           nextSongUrl.value = nextdata.value
         }
         nextSongLyric.value = await GetMusicLyric(playlist.value[nextIndex])
         nextSongLrc.value = await GetWordMusicLyric(playlist.value[nextIndex])
         //const wordlyric = await GetWordMusicLyric(id)
-        nextSongDetail.value = data.value // 设置当前歌曲详细信息
+        console.log(data.value.songs[0].name)
+        console.log(nextSongUrl.value)
       } else nextSongUrl.value = null
     }
+    //加载数据，根据playlist中的歌曲Id把信息加入播放列表（currentSonglist）
     const loadPlaylistData = async () => {
       try {
         const songIds = playlist.value // 假设是 number[]
@@ -264,10 +290,12 @@ export const Player = defineStore(
     }
 
     const addSongToPlaylist = async (songid, next) => {
-      if (playlist.value.includes(songid)) {
+      if(playlist.value.includes(songid)){
         return
+        //如果歌曲已经存在就不再添加
       }
-      playlist.value.splice(next, 0, songid) // 添加歌曲到播放列表
+      nextSongUrl.value = null
+      await playlist.value.splice(next, 0, songid) // 添加歌曲到播放列表
       const res = await GetMusicDetail({ ids: songid })
       const song = res.songs[0]
       currentSongList.value.splice(next, 0, {
@@ -281,12 +309,11 @@ export const Player = defineStore(
     }
     const addWholePlaylist = (songs) => {
       playlist.value = songs // 替换整个播放列表
-      loadPlaylistData()
     }
     const removeSongFromPlaylist = (songId) => {
       const wasPlaying = currentSong.value === songId // 检查是否是当前播放的歌曲
       playlist.value = playlist.value.filter((song) => song !== songId) // 从播放列表中移除歌曲
-      loadPlaylistData()
+      currentSongList.value = currentSongList.value.filter((song) => song.id !== songId)
       if (wasPlaying && playlist.value.length > 0) {
         playNextSong() // 如果移除的是当前播放的歌曲且播放列表不为空，切换到下一首
       } else if (playlist.value.length === 0) {
@@ -294,8 +321,9 @@ export const Player = defineStore(
         audio.pause()
         isplaying.value = false
       }
+      //loadPlaylistData()
     }
-    const togglePlay = () => {
+    const togglePlay = async () => {
       if (isplaying.value) {
         audio.pause()
         isplaying.value = false
@@ -306,7 +334,7 @@ export const Player = defineStore(
           return
         }
         audio.src = currentSongUrl.value.toString()
-        audio.load()
+        await audio.load()
         audio.currentTime = currentSongTime.value
         audio
           .play()
@@ -323,6 +351,9 @@ export const Player = defineStore(
       if (playlist.value.length === 0) return // 如果播放列表为空，直接返回
 
       // 如果 currentSongIndex 为 -1（当前没有匹配 id），从 0 开始
+      console.log(playlist.value.length)
+      console.log(currentSongList.value.length)
+      console.log(currentSongIndex.value)
       const currentIndex = currentSongIndex.value === -1 ? 0 : currentSongIndex.value
       const nextIndex = (currentIndex + 1) % playlist.value.length // 计算下一首歌曲索引
       const song = playlist.value[nextIndex]

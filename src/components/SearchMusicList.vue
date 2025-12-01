@@ -201,6 +201,7 @@ async function play(item: Item) {
     console.log(typeof item.id)
     // 注意：以对象形式传参（避免 toFormData 报错）
     const idRes: any = await MusicIdList({ id: item.id })
+    
     console.log('MusicIdList response:', idRes)
 
     // 从响应中提取 id 列表（根据你的后端结构调整）
@@ -219,17 +220,16 @@ async function play(item: Item) {
       console.error('No track ids returned from MusicIdList', idRes)
       return
     }
-    // 取第一首，先获取可播放 url
-    const firstId = ids[0]
-    console.log('First track id to play:', firstId)
+   
+    // 把标准化的 id 列表加入播放器
+    await player.addWholePlaylist(ids)
+    const firstId = idRes[0].id
     player.nextSongUrl = null
     // 调用播放（如果 store.playcurrentSong 支持传 url，可直接传；否则按你现有逻辑处理）
-    player.playcurrentSong({
+    await player.playcurrentSong({
       firstId,
     })
-    // 把标准化的 id 列表加入播放器
-    player.addWholePlaylist(ids)
-
+    player.loadPlaylistData()
     console.log('isplaying', player.isplaying)
   } catch (err) {
     console.error('play failed:', err)

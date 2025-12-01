@@ -215,12 +215,13 @@ async function play(item: Item) {
     console.log('First track id to play:', firstId)
     player.nextSongUrl = null
     // 调用播放（如果 store.playcurrentSong 支持传 url，可直接传；否则按你现有逻辑处理）
-    player.playcurrentSong({
+
+    // 把标准化的 id 列表加入播放器
+    await player.addWholePlaylist(ids)
+    await player.playcurrentSong({
       firstId,
     })
-    // 把标准化的 id 列表加入播放器
-    player.addWholePlaylist(ids)
-
+    player.loadPlaylistData()
     console.log('isplaying', player.isplaying)
   } catch (err) {
     console.error('play failed:', err)

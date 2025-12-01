@@ -96,7 +96,7 @@
             :src="userInfos.avatarUrl"
             alt="用户头像"
           />
-          <img class="userPic" v-else src="../../public/user.jpg" alt="默认头像" />
+          <img class="userPic" v-else src="/user.jpg" alt="默认头像" />
         </button>
 
         <!-- 下拉菜单 -->
@@ -195,6 +195,10 @@ const goToSettings = () => {
 }
 
 const handleLogout = () => {
+  if (!pagecontroler.IsLogin) {
+    return
+    //若没有登录则不执行操作
+  }
   LogOut()
   // 清除用户数据
   localStorage.removeItem('neteaseCookie')
@@ -225,6 +229,9 @@ const dosearch = async () => {
 </script>
 
 <style>
+button:focus {
+  outline: none;
+}
 .topbar {
   position: fixed;
   top: 0;

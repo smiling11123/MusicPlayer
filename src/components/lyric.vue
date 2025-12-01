@@ -885,8 +885,8 @@ const TurnIn = (artistid: number) => {
 .slider:hover::-webkit-slider-thumb {
   opacity: 1;
   transform: scale(1.2);
-  width: 12px;
-  height: 12px;
+  width: 0px;
+  height: 0px;
 }
 
 /* 歌词区 */

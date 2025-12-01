@@ -78,7 +78,7 @@ import { GetVideo, GetVideoUrl } from '@/api/video'
 
 interface MV {
   id: number
-  tittle: string  // 修正: title
+  tittle: string 
   artist: Artist[]
   duration: number
   playcount?: number

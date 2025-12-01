@@ -235,12 +235,13 @@ function playAll() {
   }
 }
 
-function playSong(song: SongItem, index: number) {
+const playSong = async (song: SongItem, index: number) => {
   player.playFM = false
   player.playnormal = true
   player.nextSongUrl = null
-  player.addWholePlaylist(songs.value.map((s) => s.id))
-  player.playcurrentSong(song.id)
+  await player.addWholePlaylist(songs.value.map((s) => s.id))
+  await player.playcurrentSong(song.id)
+  player.loadPlaylistData()
 }
 const TurnIn = (artistid) => {
   router.push({name: 'artist', params: { id: artistid } } )

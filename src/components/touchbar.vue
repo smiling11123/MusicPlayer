@@ -33,9 +33,9 @@
       </div>
     </div>
 
-    <div class="center-area">
+    <div class="center-area" >
       <div class="controls-row">
-        <button class="ctrl-btn secondary" @click="prev" title="上一首">
+        <button class="ctrl-btn secondary" @click="prev"    title="上一首">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
             <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
           </svg>
@@ -229,12 +229,32 @@ const bindAudioEvents = () => {
   isEventBound = true
 }
 
+const handlekey = (event) => {
+  const ctrl = event.ctrlKey
+  const shift = event.shiftKey
+  const alt = event.altKey
+  if(event.key === 'ArrowRight' && ctrl) {
+    next()
+  }
+  if(event.key === 'ArrowLeft' && ctrl) {
+    prev()
+  }
+  if(event.key === 'p' && ctrl) {
+    togglePlay()
+  }
+  if(event.key === 'ArrowUp' && ctrl) {
+    
+  }
+}
+
+
 onMounted(() => {
   if (player.audio) {
     if(player.audio.paused){
       player.isplaying = false
     }
     bindAudioEvents()
+    window.addEventListener('keyup', handlekey);
     duration.value = player.audio.duration || player.currentSongDetail.duration || 0
     currentTime.value = player.audio.currentTime || player.currentSongTime || 0
     seekValue.value = currentTime.value
@@ -341,7 +361,7 @@ const next = async () => {
         console.error('No track ids returned from MusicIdList', idRes)
         return
       }
-      player.addSongsToPlaylist(ids)
+      await player.addSongsToPlaylist(ids)
     }
   }
   player.playNextSong()
@@ -363,6 +383,10 @@ const Onlyoneplaymodel = () => {
 /* 布局核心：Grid 布局 
   解决混乱的关键：左中右三栏，中间自适应但最大宽度受限，左右两边平分剩余空间
 */
+button:focus {
+  outline: none;
+}
+
 .touchbar {
   position: fixed;
   bottom: 0;
@@ -547,14 +571,12 @@ const Onlyoneplaymodel = () => {
   width: 100%;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1); /* 轨道底色 */
+  background: rgba(255, 255, 255, 0.1); 
   outline: none;
   cursor: pointer;
   position: relative;
 }
 
-/* 进度条着色部分（Webkit 技巧：使用 background-image 模拟） */
-/* 为了简单且高性能，这里使用 CSS 变量 --progress 控制渐变 */
 .slider {
   background: linear-gradient(
     to right,

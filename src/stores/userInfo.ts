@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 export const userInfo = defineStore('userInfo', () => {
   // 定义状态
+  
   const userProfile = ref(localStorage.getItem('userProfile') || null)
   const userDetail = ref(localStorage.getItem('userDetail') || null)
   const userId = ref(userProfile.value ? JSON.parse(userProfile.value).userId || null : null)

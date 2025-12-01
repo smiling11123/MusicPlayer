@@ -32,6 +32,8 @@ net api服务默认端口 3000
 - 支持网易账号登录（手机 / 邮箱 / 扫码 / cookie） ps: 手机、邮箱和扫码登录目前由于api限制无法完美支持,扫码登录比较慢(测试成功登录需要近两分钟)。
 - 支持显示类AppleMusic歌词页面
 - 支持逐字歌词
+- 提供窗口快捷键、全局快捷键
+- 支持拖动改变播放顺序
 - 支持每日推荐歌单、私人FM  ps: 私人FM可能存在瑕疵。
 - 支持音乐解灰(感谢[第三方网易云api](https://github.com/NeteaseCloudMusicApiEnhanced/api-enhanced)提供的接口以及[unblockneteasemusic](https://github.com/UnblockNeteaseMusic/server)提供的解灰服务）
 - 支持无vip播放时替换原试听链接为其他平台(由[解灰服务](https://github.com/UnblockNeteaseMusic/server)为基础)
@@ -47,6 +49,9 @@ net api服务默认端口 3000
 
 1. 完善个人页面（最近播放、我喜欢的歌单、收藏歌单等）
 2. 喜欢歌曲
+3. 桌面歌词
+4. 完善快捷键
+5. 本地导入
    
 ## 灵感来源
 

@@ -111,16 +111,16 @@ onUnmounted(() => {
 })
 
 // --- 播放与交互逻辑保持不变 ---
-const playSong = (song: SongItem) => {
+const playSong = async (song: SongItem) => {
   player.playFM = false
   player.playnormal = true
   player.nextSongUrl = null
+  await player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
   player.playcurrentSong({ firstId: song.id })
-  player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
 }
 
 const goToAllSongs = () => {
-  router.push({name: 'WholeSearchSongs'})
+  router.push({ name: 'WholeSearchSongs' })
 }
 const TurnIn = (artistid) => {
   router.push({ name: 'artist', params: { id: artistid } })

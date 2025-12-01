@@ -78,11 +78,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { NSplit } from 'naive-ui'
 import { pagecontrol } from '@/stores/page'
 import { defineAsyncComponent } from 'vue'
+import { Player } from './stores/index'
 const Topbar = defineAsyncComponent(() => import('@/components/TopBar.vue'))
 const Touchbar = defineAsyncComponent(() => import('./components/TouchBar.vue'))
 const Homepage = defineAsyncComponent(() => import('@/components/HomePage.vue'))
@@ -92,6 +93,7 @@ const Lyric = defineAsyncComponent(() => import('@/components/Lyric.vue'))
 import { CheckLoginStatus } from './api/Login'
 const pagecontroler = pagecontrol()
 const route = useRoute()
+const player = Player()
 const cachedComponents = ref([
   'Musichub',
   'Lricy',
@@ -100,6 +102,20 @@ const cachedComponents = ref([
   'NewMusicList',
   'SearchResult',
 ])
+
+const handleGlobaltoggle = () => {
+  console.log('Renderer received global-toggle-play')
+  player.togglePlay()
+}
+const handleGlobalnext = () => {
+  console.log('Renderer received global-next')
+  player.playNextSong()
+}
+const handleGlobalprev = () => {
+  console.log('Renderer received global-prev')
+  player.playPrevSong()
+}
+
 const code = ref(0)
 onMounted(async () => {
   //登录状态验证
@@ -116,6 +132,15 @@ onMounted(async () => {
   } else {
     pagecontroler.IsLogin = false
   }
+  window.electronAPI.global_toggle(handleGlobaltoggle)
+  window.electronAPI.global_next(handleGlobalnext)
+  window.electronAPI.global_prev(handleGlobalprev)
+})
+
+onUnmounted(async () => {
+  window.electronAPI.remove_toggle(handleGlobaltoggle)
+  window.electronAPI.remove_next(handleGlobalnext)
+  window.electronAPI.remove_prev(handleGlobalprev)
 })
 const leftPaneSize = ref(0.2) // 默认展开 20%
 
@@ -200,7 +225,6 @@ const onPaneResize = debounce((newSize) => {
 
 /* 中间内容区域 - 保持比例不变 */
 .center-content {
-
   height: 100%;
   transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 平滑过渡 */
 }
