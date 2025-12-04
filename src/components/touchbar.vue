@@ -31,6 +31,26 @@
           </span>
         </div>
       </div>
+      <div class="comment">
+        <button class="comment-btn" @click="tocomment()">
+          <svg
+            t="1764773243000"
+            class="icon"
+            viewBox="0 0 1024 1024"
+            version="1.1"
+            xmlns="http://www.w3.org/2000/svg"
+            p-id="5617"
+            width="20"
+            height="20"
+          >
+            <path
+              d="M816 808h-144c-4.8 0-8 1.6-11.2 4.8l-80 80c-36.8 36.8-97.6 36.8-136 0l-80-80c-3.2-3.2-6.4-4.8-11.2-4.8h-144c-70.4 0-128-57.6-128-128v-448c0-70.4 57.6-128 128-128h608c70.4 0 128 57.6 128 128v448c-1.6 70.4-59.2 128-129.6 128z m0-64c35.2 0 64-28.8 64-64v-448c0-35.2-28.8-64-64-64H208c-35.2 0-64 28.8-64 64v448c0 35.2 28.8 64 64 64h144c20.8 0 41.6 8 56 24l80 80c12.8 12.8 32 12.8 44.8 0l80-80c14.4-14.4 35.2-24 56-24H816z m-496-336c27.2 0 48 20.8 48 48v32c0 27.2-20.8 48-48 48s-48-20.8-48-48v-32c0-27.2 20.8-48 48-48z m192 0c27.2 0 48 20.8 48 48v32c0 27.2-20.8 48-48 48s-48-20.8-48-48v-32c0-27.2 20.8-48 48-48z m192 0c27.2 0 48 20.8 48 48v32c0 27.2-20.8 48-48 48s-48-20.8-48-48v-32c0-27.2 20.8-48 48-48z"
+              fill="#cdcdcd"
+              p-id="5618"
+            ></path>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div class="center-area">
@@ -91,6 +111,28 @@
     </div>
 
     <div class="right-area">
+      <button
+        title="桌面歌词"
+        class="deskLyric"
+        @click="opendesklyric"
+        :class="{ active: pagecontroler.ShowDeskLyric }"
+      >
+        <svg
+          t="1764683757701"
+          class="icon"
+          viewBox="0 0 1024 1024"
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+          p-id="2659"
+          width="20"
+          height="20"
+        >
+          <path
+            d="M728.279858 959.349561 295.066249 959.349561c-127.604236 0-231.046167-103.442954-231.046167-231.04719L64.020082 295.088762c0-127.604236 103.44193-231.04719 231.046167-231.04719l433.213609 0c127.604236 0 231.046167 103.442954 231.046167 231.04719l0 433.213609C959.326025 855.906607 855.884095 959.349561 728.279858 959.349561zM901.564483 323.968509c0-111.651916-90.512457-202.165396-202.163349-202.165396L323.949067 121.803113c-111.653963 0-202.166419 90.51348-202.166419 202.165396L121.782647 699.422623c0 111.651916 90.51348 202.165396 202.166419 202.165396l375.452067 0c111.650893 0 202.163349-90.51348 202.163349-202.165396L901.564483 323.968509zM757.162676 598.338391 266.187525 598.338391c-7.975649 0-14.442944-6.465249-14.442944-14.440897l0-28.880771c0-7.974625 6.467295-14.440897 14.442944-14.440897l490.975151 0c7.974625 0 14.439874 6.465249 14.439874 14.440897l0 28.880771C771.601526 591.872119 765.137301 598.338391 757.162676 598.338391zM757.162676 453.934536 266.187525 453.934536c-7.975649 0-14.442944-6.465249-14.442944-14.440897l0-28.881794c0-7.975649 6.467295-14.440897 14.442944-14.440897l490.975151 0c7.974625 0 14.439874 6.465249 14.439874 14.440897l0 28.881794C771.601526 447.469288 765.137301 453.934536 757.162676 453.934536zM757.162676 309.529659 554.995233 309.529659l0-57.761542 202.167442 0c7.974625 0 14.439874 6.464225 14.439874 14.440897l0 28.880771C771.601526 303.063387 765.137301 309.529659 757.162676 309.529659zM251.744581 295.088762l0-28.880771c0-7.976672 6.467295-14.440897 14.442944-14.440897L468.350874 251.767094l0 57.761542L266.187525 309.528636C258.211876 309.529659 251.744581 303.063387 251.744581 295.088762zM526.113439 699.4216c39.878243 0 72.204485 32.327266 72.204485 72.202439 0 39.877219-32.326243 72.202439-72.204485 72.202439-39.875173 0-72.201415-32.32522-72.201415-72.202439C453.912024 731.748866 486.238266 699.4216 526.113439 699.4216z"
+            p-id="2660"
+          ></path>
+        </svg>
+      </button>
       <button
         title="单曲循环"
         class="onlyone"
@@ -191,6 +233,7 @@ import { Player } from '@/stores/index'
 import { pagecontrol } from '@/stores/page'
 import { GetPersonalFM } from '@/api/GetMusicList'
 import { useRouter } from 'vue-router'
+import { event } from '../../net/interface'
 
 const router = useRouter()
 const player = Player()
@@ -256,6 +299,11 @@ onMounted(() => {
     duration.value = player.audio.duration || player.currentSongDetail.duration || 0
     currentTime.value = player.audio.currentTime || player.currentSongTime || 0
     seekValue.value = currentTime.value
+    if (window.electronAPI) {
+      window.electronAPI.deskLyricStatus((event, status) => {
+        pagecontroler.ShowDeskLyric = status
+      })
+    }
   }
 })
 
@@ -343,6 +391,14 @@ const Randomplaymodel = () => {
 const Onlyoneplaymodel = () => {
   player.onlyoneplaymodel()
 }
+
+const opendesklyric = () => {
+  window.electronAPI.toggleDesktopLyric()
+}
+
+const tocomment = () => {
+  router.push({name: 'comment', params: {id: player.currentSong}})
+}
 </script>
 
 <style scoped>
@@ -358,7 +414,7 @@ button:focus {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 72px; /* 稍微增加高度，更大气 */
+  height: 65px; /* 稍微增加高度，更大气 */
   z-index: 9999;
 
   display: grid;
@@ -367,9 +423,19 @@ button:focus {
   align-items: center;
   padding: 0 24px;
   gap: 20px;
-  background: #1c1c1e;
+  background-color: rgb(#1c1c1e, 0.1);
   color: #fff;
   user-select: none;
+  /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+  /* 开启硬件加速 */
+  transform: translateZ(0);
+  will-change: transform;
+
+  /* 可选：添加细微的边框线增强层次感 */
+  transition: background 0.3s ease;
 }
 
 /* ================= 左侧：信息区 ================= */
@@ -572,6 +638,26 @@ button:focus {
 .slider:active::-webkit-slider-thumb {
   transform: scale(1.3);
 }
+.comment {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+.comment-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: color 0.2s;
+  display: flex;
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
 
 /* ================= 右侧：工具区 ================= */
 .right-area {
@@ -579,6 +665,29 @@ button:focus {
   align-items: center;
   justify-content: flex-end;
   gap: 16px;
+}
+.deskLyric {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: color 0.2s;
+  display: flex;
+}
+.deskLyric svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor; /* 继承按钮的 color */
+}
+.deskLyric:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+.deskLyric.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
 }
 .onlyone {
   background: none;

@@ -17,6 +17,14 @@ declare global {
     removeTogglePlay: (callback: () => void) => void
     removePlayNext: (callback: () => void) => void
     removePlayPrev: (callback: () => void) => void
+    deskLyricStatus: (callback: (event: any, Status: boolean) => void) => void
+    // Auto Updater
+    checkForUpdate: () => void
+    downloadUpdate: () => void
+    quitAndInstall: () => void
+    onAutoUpdaterMessage: (
+      callback: (event: any, data: { message: string; data: any }) => void,
+    ) => void
     // 如需更多方法，按上面格式继续添加
   }
 

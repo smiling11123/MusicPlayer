@@ -2,7 +2,7 @@
   <div class="playlist-page">
     <div v-if="isLoading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p>正在加载...</p>
+      <p>正在加载专辑信息...</p>
     </div>
 
     <div v-else>
@@ -13,7 +13,18 @@
 
         <div class="info">
           <div class="title-row">
+            <span class="tag">专辑</span>
             <h1 class="title">{{ AlbumDetail.name }}</h1>
+          </div>
+
+          <div class="creator-info" v-if="AlbumDetail.artist">
+            <span class="label">歌手：</span>
+            <span class="name" @click="TurnIn(AlbumDetail.artist.id)">{{
+              AlbumDetail.artist.name
+            }}</span>
+            <span class="date" v-if="AlbumDetail.publishTime"
+              >发行时间：{{ formatDate(AlbumDetail.publishTime) }}</span
+            >
           </div>
 
           <div class="description-wrapper">
@@ -28,6 +39,7 @@
                 <path d="M8 5v14l11-7z" />
               </svg>
             </button>
+            <div class="stats-text">歌曲数: {{ songs.length }}</div>
           </div>
         </div>
       </div>
@@ -70,7 +82,7 @@
                 <span
                   v-for="(artist, index) in song.artists"
                   :key="artist.id"
-                  @click="TurnIn(artist.id)"
+                  @click.stop="TurnIn(artist.id)"
                 >
                   {{ artist.name }}<span v-if="index < song.artists.length - 1"> / </span>
                 </span>
@@ -82,7 +94,88 @@
             </div>
 
             <div class="right-actions">
-              <button class="action-btn like">
+              <div class="more-container" @dblclick.stop>
+                <button class="more" @click.stop="toggleMenu(song.id)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+                    />
+                  </svg>
+                </button>
+
+                <transition name="fade">
+                  <div class="dropdown-menu" v-show="activeMenuId === song.id" @click.stop>
+                    <div class="menu-item" @click="handleMenuAction('next', song)">
+                      <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" fill="currentColor" />
+                      </svg>
+                      <span>下一首播放</span>
+                    </div>
+
+                    <div class="menu-item" @click="handleMenuAction('like', song)">
+                      <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path
+                          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      <span>添加到我喜欢</span>
+                    </div>
+
+                    <div
+                      class="menu-item has-submenu"
+                      @click.stop="toggleSubmenu('playlist')"
+                      :class="{ 'is-active': openSubmenuId === 'playlist' }"
+                    >
+                      <div class="menu-content">
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="16"
+                          height="16"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M19 11H5m14-6H5m9 12H5"></path>
+                          <path d="M17 17v6m3-3h-6"></path>
+                        </svg>
+                        <span>收藏到歌单</span>
+                        <span class="arrow" :class="{ rotate: openSubmenuId === 'playlist' }"
+                          >›</span
+                        >
+                      </div>
+
+                      <transition name="fade">
+                        <div class="submenu" v-show="openSubmenuId === 'playlist'" @click.stop>
+                          <div class="submenu-scroll">
+                            <div
+                              v-for="list in myPlaylists"
+                              :key="list.id"
+                              class="menu-item"
+                              @click.stop="addToPlaylist(list.id, song.id)"
+                            >
+                              <span>{{ list.name }}</span>
+                            </div>
+                            <div v-if="myPlaylists.length === 0" class="empty-tip">暂无歌单</div>
+                          </div>
+                        </div>
+                      </transition>
+                    </div>
+
+                    <div class="menu-item" @click="handleMenuAction('detail', song)">
+                      <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path
+                          d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"
+                          fill="currentColor"
+                        />
+                      </svg>
+                      <span>评论</span>
+                    </div>
+                  </div>
+                </transition>
+              </div>
+
+              <button class="action-btn like" @click.stop="handleMenuAction('like', song)">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="18"
@@ -109,115 +202,117 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Player } from '@/stores/index'
+import { userInfo } from '@/stores/userInfo' 
 import type { SongItem } from '@/stores/index'
-import { GetMusicDetail } from '@/api/GetMusic'
+import { GetMusicDetail, AddToLike, AddToMyList } from '@/api/GetMusic' 
+import { GetUserMusicList } from '@/api/GetMusicList' 
 import { GetAlbum } from '@/api/Album'
 
 const player = Player()
+const userInfos = userInfo()
 const route = useRoute()
 const router = useRouter()
+
+// 状态
 const isLoading = ref(true)
+const songs = ref<SongItem[]>([])
+const currentSongId = computed(() => player.currentSong || null)
+
+// 菜单相关
+const activeMenuId = ref<number | null>(null)
+const openSubmenuId = ref<string | null>(null)
+const myPlaylists = ref<any[]>([])
 
 const AlbumDetail = ref<any>({
   id: 0,
   name: '',
   coverImgUrl: '',
   description: '',
+  artist: null,
+  publishTime: 0,
 })
 
-const songs = ref<SongItem[]>([])
-const currentSongId = computed(() => player.currentSong || null)
-
-const ArtistId = computed(() => {
-  const artistid = route.params.id
-  return Array.isArray(artistid) ? Number(artistid[0]) : Number(artistid)
+const AlbumId = computed(() => {
+  const id = route.params.id
+  return Array.isArray(id) ? Number(id[0]) : Number(id)
 })
 
+// 加载数据
 async function loadPlaylistData() {
   isLoading.value = true
+  songs.value = []
+
   try {
-    const arid = ArtistId.value
-    if (!arid) return
+    const id = AlbumId.value
+    if (!id) return
 
-    const res = await GetAlbum(arid)
-    const hotsongs = res.songs
-    const pl = res.album
-    const playlist = ref()
-    console.log(hotsongs)
-    console.log(pl)
+    const res = await GetAlbum(id)
+    const albumData = res.album
+    const trackList = res.songs 
+
     AlbumDetail.value = {
-      id: pl.id,
-      name: pl.name,
-      coverImgUrl: pl.picUrl,
-      description: pl.briefDesc || '暂无简介',
+      id: albumData.id,
+      name: albumData.name,
+      coverImgUrl: albumData.picUrl,
+      description: albumData.briefDesc || '暂无简介',
+      artist: albumData.artist,
+      publishTime: albumData.publishTime,
     }
-    const songlist = hotsongs
-    playlist.value = songlist.map((song: any) => ({
-      id: song.id,
-    }))
-    const idRes: any = playlist.value
-    console.log('MusicIdList response:', idRes)
 
-    // 从响应中提取 id 列表（根据你的后端结构调整）
-    let ids: number[] = []
-    if (Array.isArray(idRes)) {
-      ids = idRes.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-    } else if (Array.isArray(idRes?.ids)) {
-      ids = idRes.ids.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-    } else if (Array.isArray(idRes?.data)) {
-      ids = idRes.data.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-    } else if (idRes?.id) {
-      ids = [idRes.id]
-    }
-    playlist.value = ids
-    try {
-      const songIds = playlist.value // 假设是 number[]
-      const results = await Promise.all(
-        songIds.map((id) =>
-          GetMusicDetail({ ids: id }) // 单个请求
-            .then((res) => res) // 提取数据
-            .catch((err) => {
-              console.error(`歌曲 ${id} 加载失败:`, err)
-              return null // 失败时返回null
-            }),
-        ),
-      )
-      songs.value = results
-        .filter(Boolean) // 移除null
-        .map((song) => ({
-          id: song.songs[0].id,
-          name: song.songs[0].name,
-          album: song.songs[0].al?.name || '未知专辑',
-          artists: song.songs[0].ar.map((ar: any) => ({ id: ar.id, name: ar.name })),
-          duration: song.songs[0].dt ? Math.floor(song.songs[0].dt / 1000) : 0,
-          cover: song.songs[0].al?.picUrl || '',
-        }))
-    } catch (error) {
-      console.error('加载歌曲失败:', error)
-    } finally {
+    const trackIds = trackList.map((t: any) => t.id)
+
+
+    if (trackIds.length > 0) {
+
+      const detailRes = await GetMusicDetail({ ids: trackIds.join(',') })
+      const details = detailRes.songs || []
+
+      songs.value = details.map((song: any) => ({
+        id: song.id,
+        name: song.name,
+        album: song.al?.name || '未知专辑',
+        artists: song.ar.map((ar: any) => ({ id: ar.id, name: ar.name })),
+        duration: song.dt ? Math.floor(song.dt / 1000) : 0,
+        cover: song.al?.picUrl || '',
+      }))
     }
   } catch (err) {
-    console.error(err)
+    console.error('加载专辑失败:', err)
   } finally {
     isLoading.value = false
   }
 }
 
-onMounted(loadPlaylistData)
+// 初始化
+onMounted(async () => {
+  loadPlaylistData()
+  document.addEventListener('click', closeMenu)
+
+  if (userInfos.userId) {
+    try {
+      const res: any = await GetUserMusicList(userInfos.userId)
+      myPlaylists.value = (res.playlist || []).filter(
+        (p: any) => p.creator.userId === userInfos.userId,
+      )
+    } catch (e) {
+      console.error('获取用户歌单失败', e)
+    }
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeMenu)
+})
+
 watch(
-  () => ArtistId.value,
+  () => AlbumId.value,
   (v) => v && loadPlaylistData(),
 )
 
-function formatPlayCount(n: number) {
-  if (n > 100000000) return (n / 100000000).toFixed(1) + '亿'
-  if (n > 10000) return (n / 10000).toFixed(1) + '万'
-  return n
-}
-
+// --- 辅助函数 ---
 function formatDate(timestamp: number) {
   if (!timestamp) return ''
   const date = new Date(timestamp)
@@ -232,44 +327,132 @@ function formatTime(s: number) {
   return `${m}:${sc}`
 }
 
-function playAll() {
-  player.playFM = false
-  player.playnormal = true
+const playAll = async () => {
   if (songs.value.length) {
-    player.addWholePlaylist(songs.value.map((s) => s.id))
-    player.playcurrentSong(songs.value[0].id)
+    player.playFM = false
+    player.playnormal = true
+    player.nextSongUrl = null
+    await player.addWholePlaylist(songs.value.map((s) => s.id))
+    await player.playcurrentSong(songs.value[0].id)
+    player.loadPlaylistData()
   }
 }
 
-function playSong(song: SongItem, index: number) {
+const playSong = async (song: SongItem, index: number) => {
   player.playFM = false
   player.playnormal = true
-  player.addWholePlaylist(songs.value.map((s) => s.id))
-  player.playcurrentSong(song.id)
+  player.nextSongUrl = null
+  await player.addWholePlaylist(songs.value.map((s) => s.id))
+  await player.playcurrentSong(song.id)
+  player.loadPlaylistData()
 }
 
-const TurnIn = (artistid) => {
+const TurnIn = (artistid: number) => {
   router.push({ name: 'artist', params: { id: artistid } })
+}
+
+// --- 菜单控制逻辑 ---
+const toggleMenu = (id: number) => {
+  if (activeMenuId.value === id) {
+    closeMenu()
+  } else {
+    activeMenuId.value = id
+    openSubmenuId.value = null
+  }
+}
+
+const toggleSubmenu = (key: string) => {
+  if (openSubmenuId.value === key) {
+    openSubmenuId.value = null
+  } else {
+    openSubmenuId.value = key
+  }
+}
+
+const closeMenu = () => {
+  activeMenuId.value = null
+  openSubmenuId.value = null
+}
+
+const addToPlaylist = async (pid: number, songId: number) => {
+  try {
+    const res: any = await AddToMyList({ op: 'add', listid: pid, songid: songId })
+    if (res.body.code === 200) console.log('添加成功')
+  } catch (error) {
+    console.error(error)
+  }
+  closeMenu()
+}
+
+const handleMenuAction = async (action: string, song: SongItem) => {
+  if (action === 'playlist') return
+
+  closeMenu()
+  switch (action) {
+    case 'next':
+      await player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
+      player.nextSongUrl = null
+      break
+    case 'like':
+      try {
+        const res: any = await AddToLike({ id: song.id, like: 'true' })
+        if (res.code === 200) console.log('已喜欢')
+      } catch (e) {
+        console.error(e)
+      }
+      break
+    case 'detail':
+      console.log('评论', song.name)
+      router.push({ name: 'comment', params: { id: song.id } })
+      break
+  }
 }
 </script>
 
 <style scoped lang="scss">
 // 变量定义
-$bg-color: #1c1c1e; // 你截图中的深色背景
+$bg-color: #1c1c1e;
 $item-hover: rgba(255, 255, 255, 0.06);
 $text-main: #e0e0e0;
 $text-sub: #888888;
-$primary: #0bdc9a;
+$primary: #fff;
+
+// 菜单专用颜色 (RGB格式)
+$menu-bg: #1c1c1e;
+$menu-hover: #3a3a3a;
 
 .playlist-page {
   padding: 30px;
   background-color: $bg-color;
   min-height: 100vh;
   color: $text-main;
+  padding-top: 60px;
   border-radius: 30px;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   user-select: none;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid $text-sub;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 // --- 头部 ---
@@ -285,7 +468,6 @@ $primary: #0bdc9a;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-
     .cover {
       width: 100%;
       height: 100%;
@@ -303,7 +485,6 @@ $primary: #0bdc9a;
       align-items: center;
       gap: 12px;
       margin-bottom: 12px;
-
       .tag {
         border: 1px solid $primary;
         color: $primary;
@@ -311,7 +492,6 @@ $primary: #0bdc9a;
         padding: 2px 6px;
         border-radius: 4px;
       }
-
       .title {
         font-size: 30px;
         font-weight: 700;
@@ -327,11 +507,8 @@ $primary: #0bdc9a;
       margin-bottom: 15px;
       font-size: 13px;
       color: $text-sub;
-
-      .avatar {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
+      .label {
+        color: #888;
       }
       .name {
         color: #ccc;
@@ -360,7 +537,6 @@ $primary: #0bdc9a;
       align-items: center;
       gap: 20px;
       margin-top: 15px;
-
       .stats-text {
         font-size: 13px;
         color: $text-sub;
@@ -368,6 +544,7 @@ $primary: #0bdc9a;
     }
   }
 }
+
 .play-all-btn {
   bottom: 12px;
   right: 12px;
@@ -377,10 +554,9 @@ $primary: #0bdc9a;
   color: #fff;
   border: none;
   border-radius: 50%;
-  transform: translate(0, 5px); // 默认向下偏移一点
+  transform: translate(0, 5px);
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-
   &:hover {
     transform: scale(1) !important;
     background: rgba(255, 255, 255, 0.2);
@@ -389,11 +565,11 @@ $primary: #0bdc9a;
     transform: scale(0.95) !important;
   }
 }
-// --- 列表部分 ---
+
+// --- 列表 ---
 .song-list-container {
   max-width: 100%;
 }
-
 .list-header {
   display: flex;
   padding: 0 10px 10px 10px;
@@ -401,10 +577,9 @@ $primary: #0bdc9a;
   margin-bottom: 10px;
   font-size: 13px;
   color: $text-sub;
-
   .col-cover {
     width: 80px;
-  } // 包含序号宽 + 封面宽
+  }
   .col-title {
     flex: 2;
   }
@@ -422,19 +597,16 @@ $primary: #0bdc9a;
   flex-direction: column;
   gap: 2px;
 }
-
 .song-item {
   display: flex;
-  align-items: center; // 关键：垂直居中
-  height: 60px; // 固定高度，防止太高
+  align-items: center;
+  height: 60px;
   padding: 0 10px;
   border-radius: 6px;
   transition: all 0.2s;
   cursor: default;
-
   &:hover {
     background-color: $item-hover;
-
     .cover-container .play-mask {
       opacity: 1;
     }
@@ -442,19 +614,14 @@ $primary: #0bdc9a;
       opacity: 1;
     }
   }
-
   &.playing {
     background-color: rgba($primary, 0.1);
-
-    .song-title {
-      color: $primary;
-    }
+    .song-title,
     .index-num {
       color: $primary;
     }
   }
 
-  // 1. 序号
   .song-index {
     width: 30px;
     text-align: center;
@@ -462,7 +629,6 @@ $primary: #0bdc9a;
     font-size: 14px;
     flex-shrink: 0;
     margin-right: 10px;
-
     .playing-icon {
       display: flex;
       align-items: flex-end;
@@ -489,7 +655,6 @@ $primary: #0bdc9a;
     }
   }
 
-  // 2. 封面
   .cover-container {
     width: 40px;
     height: 40px;
@@ -498,13 +663,11 @@ $primary: #0bdc9a;
     position: relative;
     flex-shrink: 0;
     margin-right: 15px;
-
     img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-
     .play-mask {
       position: absolute;
       inset: 0;
@@ -522,39 +685,27 @@ $primary: #0bdc9a;
     }
   }
 
-  // 3. 歌名 + 歌手
   .main-info {
-    flex: 2; // 占据主要空间
+    flex: 2;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    overflow: hidden; // 必须，否则无法省略
+    overflow: hidden;
     margin-right: 20px;
-
     .song-title {
       font-size: 15px;
       color: $text-main;
       margin-bottom: 2px;
-      white-space: nowrap; // 不换行
-      overflow: hidden;
-      text-overflow: ellipsis;
-
-      .alia {
-        color: $text-sub;
-        margin-left: 4px;
-        font-size: 13px;
-      }
-    }
-
-    .artist-name {
-      font-size: 12px;
-      color: $text-sub;
-
-      // 单行省略
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-
+    }
+    .artist-name {
+      font-size: 12px;
+      color: $text-sub;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       span {
         cursor: pointer;
         &:hover {
@@ -564,7 +715,6 @@ $primary: #0bdc9a;
     }
   }
 
-  // 4. 专辑
   .album-info {
     flex: 1;
     font-size: 13px;
@@ -575,7 +725,6 @@ $primary: #0bdc9a;
     margin-right: 20px;
   }
 
-  // 5. 右侧操作
   .right-actions {
     width: 80px;
     display: flex;
@@ -583,19 +732,17 @@ $primary: #0bdc9a;
     justify-content: flex-end;
     gap: 15px;
     flex-shrink: 0;
-
     .action-btn {
       background: none;
       border: none;
       color: $text-sub;
       cursor: pointer;
-      opacity: 0; // 默认隐藏
+      opacity: 0;
       padding: 4px;
       &:hover {
         color: #fff;
       }
     }
-
     .song-duration {
       font-size: 13px;
       color: #666;
@@ -604,7 +751,149 @@ $primary: #0bdc9a;
   }
 }
 
-// 动画
+/* 更多操作容器 */
+.more-container {
+  flex-shrink: 0;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+  position: relative;
+  .is-active & {
+    opacity: 1;
+  }
+  .more {
+    width: 30px;
+    height: 30px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+}
+
+/* --- 下拉菜单样式 --- */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 160px;
+  background-color: rgba($menu-bg, 0.6);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  padding: 6px;
+  z-index: 100;
+  margin-top: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: visible !important;
+
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  transition: background 0.3s ease;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #ddd;
+  font-size: 13px;
+  transition: background-color 0.2s;
+  position: relative;
+  &:hover,
+  &.is-active {
+    background-color: $menu-hover;
+    color: #fff;
+  }
+  svg {
+    margin-right: 10px;
+    opacity: 0.8;
+    flex-shrink: 0;
+  }
+}
+
+.menu-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.arrow {
+  margin-left: auto;
+  font-size: 16px;
+  color: #888;
+  line-height: 1;
+  transition: transform 0.2s ease;
+  &.rotate {
+    transform: rotate(90deg);
+  }
+}
+
+.submenu {
+  position: absolute;
+  top: -4px;
+  right: 100%;
+  margin-right: 8px;
+  width: 180px;
+  background-color: rgba($menu-bg, 0.5);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 101;
+  padding: 6px;
+
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.submenu-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+  }
+}
+.submenu .menu-item {
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.empty-tip {
+  padding: 10px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+}
+
+/* 动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
 @keyframes bounce {
   0%,
   100% {
@@ -615,7 +904,7 @@ $primary: #0bdc9a;
   }
 }
 
-// 移动端适配
+/* 移动端适配 */
 @media (max-width: 768px) {
   .list-header {
     display: none;
@@ -625,7 +914,6 @@ $primary: #0bdc9a;
     align-items: center;
     text-align: center;
   }
-
   .song-item {
     .album-info {
       display: none;

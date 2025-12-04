@@ -84,6 +84,24 @@
           ></path>
         </svg>
       </button>
+      <button class="musichub" @click="gotomusichub">
+        <svg
+          t="1764751129627"
+          class="icon"
+          viewBox="0 0 1024 1024"
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+          p-id="3502"
+          width="20"
+          height="20"
+        >
+          <path
+            d="M371.2 53.333333H652.8c9.386667 0 16.597333 0 22.869333 0.682667A117.333333 117.333333 0 0 1 780.373333 165.12a123.136 123.136 0 0 1 87.594667 123.221333c16.981333 7.68 32 18.218667 44.885333 32.938667 26.282667 30.037333 34.304 66.773333 34.645334 109.653333 0.298667 41.472-6.698667 93.952-15.445334 159.317334l-17.664 132.608c-6.826667 51.114667-12.330667 92.501333-20.906666 124.885333-8.96 33.706667-22.101333 61.653333-46.805334 83.328-24.746667 21.632-54.186667 30.976-88.789333 35.413333-33.28 4.181333-74.965333 4.181333-126.549333 4.181334H392.618667c-51.541333 0-93.269333 0-126.506667-4.224-34.602667-4.394667-64.042667-13.738667-88.746667-35.413334-24.746667-21.632-37.930667-49.578667-46.848-83.285333-8.576-32.426667-14.08-73.770667-20.906666-124.885333l-17.706667-132.608c-8.704-65.365333-15.701333-117.845333-15.36-159.274667 0.256-42.922667 8.32-79.658667 34.602667-109.696a129.066667 129.066667 0 0 1 44.970666-32.981333A123.136 123.136 0 0 1 243.626667 165.12a117.333333 117.333333 0 0 1 104.704-111.104c6.272-0.682667 13.482667-0.682667 22.826666-0.682667z m-62.634667 106.666667h406.869334a53.333333 53.333333 0 0 0-46.592-42.368 210.090667 210.090667 0 0 0-17.792-0.298667H372.906667c-11.946667 0-15.402667 0.042667-17.792 0.298667a53.333333 53.333333 0 0 0-46.592 42.368z m-87.466666 111.658667c40.192-4.992 91.221333-4.992 154.112-4.992h273.578666c62.933333 0 113.962667 0 154.197334 5.034666a59.008 59.008 0 0 0-57.898667-47.701333H278.997333c-29.141333 0-52.693333 20.906667-57.898666 47.658667z m3.114666 64.170666c-35.157333 4.949333-52.949333 13.952-64.896 27.605334-11.946667 13.653333-18.56 32.426667-18.773333 67.968-0.298667 36.437333 6.016 84.437333 15.146667 152.874666l17.066666 128c7.168 53.76 12.202667 91.050667 19.626667 119.04 7.168 27.178667 15.616 41.514667 27.093333 51.584 11.52 10.026667 26.88 16.512 54.698667 20.053334 28.714667 3.669333 66.389333 3.712 120.618667 3.712h234.410666c54.186667 0 91.904-0.042667 120.618667-3.712 27.861333-3.541333 43.178667-10.026667 54.656-20.053334 11.52-10.069333 19.968-24.405333 27.136-51.541333 7.424-28.032 12.458667-65.322667 19.626667-119.082667l17.066666-128c9.130667-68.437333 15.445333-116.437333 15.189334-152.874666-0.256-35.498667-6.826667-54.314667-18.773334-67.968-11.946667-13.653333-29.781333-22.656-64.938666-27.605334-36.096-5.12-84.48-5.162667-153.514667-5.162666H377.728c-69.034667 0-117.461333 0.085333-153.514667 5.12z m355.370667 178.773334c22.613333 20.053333 47.36 29.397333 60.416 29.397333v64c-31.488 0-67.413333-16.512-96-39.68V725.333333a96 96 0 1 1-64-90.538666V448h64c0 22.997333 13.44 46.933333 35.584 66.56zM480 725.333333a32 32 0 1 0-64 0 32 32 0 0 0 64 0z"
+            p-id="3503"
+            fill="#bfbfbf"
+          ></path>
+        </svg>
+      </button>
     </div>
 
     <div class="right">
@@ -117,6 +135,14 @@
             </svg>
             <span>设置</span>
           </div>
+          <div class="menu-item" @click="checkForUpdate">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"
+              />
+            </svg>
+            <span>检查更新</span>
+          </div>
           <div class="menu-divider"></div>
           <div class="menu-item" @click="handleLogout">
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
@@ -132,6 +158,44 @@
       <button class="win-btn" @click="minimize" title="最小化">━</button>
       <button class="win-btn" @click="toggleMax" title="最大化/还原">▢</button>
       <button class="win-btn close" @click="close" title="关闭">✕</button>
+    </div>
+
+    <!-- Update Modal -->
+    <div class="update-modal-overlay" v-if="updateStatus !== 'idle'">
+      <div class="update-modal">
+        <h3>软件更新</h3>
+
+        <div class="status-content">
+          <div v-if="updateStatus === 'checking'">正在检查更新...</div>
+          <div v-if="updateStatus === 'not-available'">当前已是最新版本</div>
+          <div v-if="updateStatus === 'available'">
+            <p>发现新版本！</p>
+            <button class="primary-btn" @click="startDownload">立即下载</button>
+          </div>
+          <div v-if="updateStatus === 'downloading'">
+            <p>正在下载... {{ downloadProgress }}%</p>
+            <div class="progress-bar">
+              <div class="progress-fill" :style="{ width: downloadProgress + '%' }"></div>
+            </div>
+          </div>
+          <div v-if="updateStatus === 'downloaded'">
+            <p>下载完成！</p>
+            <button class="primary-btn" @click="quitAndInstall">立即重启安装</button>
+          </div>
+          <div v-if="updateStatus === 'error'">
+            <p>检查更新失败</p>
+            <p class="error-msg">{{ updateError }}</p>
+          </div>
+        </div>
+
+        <button
+          class="close-modal-btn"
+          @click="closeUpdateModal"
+          v-if="updateStatus !== 'downloading'"
+        >
+          关闭
+        </button>
+      </div>
     </div>
   </header>
 </template>
@@ -154,10 +218,6 @@ const pagecontroler = pagecontrol()
 const isUserMenuOpen = ref(false)
 const userMenuContainer = ref<HTMLDivElement>()
 
-
-const opendesklyric = () => {
-   window.electronAPI.toggleDesktopLyric()
-}
 const minimize = () => {
   window.electronAPI?.minimize?.()
 }
@@ -169,13 +229,15 @@ const toggleMax = async () => {
 
 const Fold = () => {
   pagecontroler.IsFold = !pagecontroler.IsFold
-  //opendesklyric()
 }
 
 const close = () => {
   window.electronAPI?.close?.()
 }
 
+const gotomusichub = () => {
+  router.push({name: "wholemusichub"})
+}
 // 新增：切换下拉菜单
 const toggleUserMenu = () => {
   isUserMenuOpen.value = !isUserMenuOpen.value
@@ -231,9 +293,64 @@ const dosearch = async () => {
   searcher.keyword = searchKeyWord.value
   router.push('SearchResult')
 }
+
+// === Auto Update Logic ===
+const updateStatus = ref('idle') // idle, checking, available, downloading, downloaded, error, not-available
+const downloadProgress = ref(0)
+const updateError = ref('')
+
+const checkForUpdate = () => {
+  isUserMenuOpen.value = false
+  updateStatus.value = 'checking'
+  window.electronAPI?.checkForUpdate()
+}
+
+const startDownload = () => {
+  window.electronAPI?.downloadUpdate()
+}
+
+const quitAndInstall = () => {
+  window.electronAPI?.quitAndInstall()
+}
+
+const closeUpdateModal = () => {
+  if (updateStatus.value === 'downloading') return // Downloading, cannot close
+  updateStatus.value = 'idle'
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+
+  // Listen for auto-updater messages
+  window.electronAPI?.onAutoUpdaterMessage((event, { message, data }) => {
+    console.log('AutoUpdater:', message, data)
+    switch (message) {
+      case 'checking-for-update':
+        updateStatus.value = 'checking'
+        break
+      case 'update-available':
+        updateStatus.value = 'available'
+        break
+      case 'update-not-available':
+        updateStatus.value = 'not-available'
+        break
+      case 'error':
+        updateStatus.value = 'error'
+        updateError.value = data?.message || 'Unknown error'
+        break
+      case 'download-progress':
+        updateStatus.value = 'downloading'
+        downloadProgress.value = Math.floor(data.percent)
+        break
+      case 'update-downloaded':
+        updateStatus.value = 'downloaded'
+        break
+    }
+  })
+})
 </script>
 
-<style>
+<style scoped lang="scss">
 button:focus {
   outline: none;
 }
@@ -248,8 +365,18 @@ button:focus {
   justify-content: space-between;
   padding: 0 16px;
   z-index: 1000;
-  background: #1c1c1e;
+  background-color: rgb(#1c1c1e,0.1);
   -webkit-app-region: drag;
+   /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%); 
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  
+  /* 开启硬件加速 */
+  transform: translateZ(0); 
+  will-change: transform;
+  
+  /* 可选：添加细微的边框线增强层次感 */
+  transition: background 0.3s ease;
 }
 
 .btn-control {
@@ -296,7 +423,21 @@ button:focus {
     background-color: rgba(255, 255, 255, 0.1);
   }
 }
-
+.musichub {
+  background: none;
+  width: 30px;
+  height: 30px;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: color 0.2s;
+  -webkit-app-region: no-drag;
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+}
 /* 所有按钮区域必须声明 no-drag */
 .btn,
 .win-btn,
@@ -353,12 +494,22 @@ button:focus {
   position: absolute;
   top: 55px;
   right: 0;
-  background: #1c1c1e;
+  background: rgb(#1c1c1e,0.9);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   min-width: 180px;
   padding: 8px 8px;
   z-index: 1001;
+   /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%); 
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  
+  /* 开启硬件加速 */
+  transform: translateZ(0); 
+  will-change: transform;
+  
+  /* 可选：添加细微的边框线增强层次感 */
+  transition: background 0.3s ease;
 }
 
 .menu-item {
@@ -420,5 +571,87 @@ button:focus {
     width: 36px;
     height: 36px;
   }
+}
+
+/* Update Modal Styles */
+.update-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-top: 400px;
+  border-radius: 10px;
+  background: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  -webkit-app-region: no-drag;
+}
+
+.update-modal {
+  background: #2c2c2e;
+  padding: 24px;
+  border-radius: 12px;
+  width: 320px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.update-modal h3 {
+  margin: 0 0 16px 0;
+  color: #fff;
+}
+
+.status-content {
+  margin-bottom: 20px;
+  color: #e0e0e0;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.primary-btn {
+  background: #ea4c89;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #aaa;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #ea4c89;
+  transition: width 0.3s ease;
+}
+
+.error-msg {
+  color: #ff4d4f;
+  font-size: 12px;
+  margin-top: 4px;
 }
 </style>

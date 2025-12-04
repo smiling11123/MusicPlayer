@@ -6,40 +6,6 @@
     </div>
 
     <div v-else>
-      <div class="playlist-header">
-        <div class="cover-wrap">
-          <img :src="playlist.coverImgUrl" alt="歌单封面" class="cover" />
-        </div>
-
-        <div class="info">
-          <div class="title-row">
-            <h1 class="title">{{ playlist.name }}</h1>
-          </div>
-
-          <div class="creator-info" v-if="playlist.creator">
-            <img :src="playlist.creator.avatarUrl" class="avatar" />
-            <span class="name">{{ playlist.creator.nickname }}</span>
-            <span class="date">最近更新: {{ formatDate(playlist.updateTime) }}</span>
-          </div>
-
-          <div class="description-wrapper">
-            <p class="description" :title="playlist.description">{{ playlist.description }}</p>
-          </div>
-
-          <div class="actions">
-            <button size="large" @click="playAll" class="play-all-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </button>
-            <div class="stats-text">
-              歌曲数: {{ playlist.trackCount }} &nbsp;|&nbsp; 播放量:
-              {{ formatPlayCount(playlist.playCount) }}
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="song-list-container">
         <div class="list-header">
           <div class="col-cover"></div>
@@ -90,7 +56,7 @@
             </div>
 
             <div class="right-actions">
-              <div class="more-container" @dblclick.stop>
+              <div class="more-container">
                 <button class="more" @click.stop="toggleMenu(song.id)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                     <path
@@ -98,7 +64,6 @@
                     />
                   </svg>
                 </button>
-
                 <transition name="fade">
                   <div class="dropdown-menu" v-show="activeMenuId === song.id" @click.stop>
                     <div class="menu-item" @click="handleMenuAction('next', song)">
@@ -107,7 +72,6 @@
                       </svg>
                       <span>下一首播放</span>
                     </div>
-
                     <div class="menu-item" @click="handleMenuAction('like', song)">
                       <svg viewBox="0 0 24 24" width="16" height="16">
                         <path
@@ -117,61 +81,10 @@
                       </svg>
                       <span>添加到我喜欢</span>
                     </div>
-
-                    <div
-                      class="menu-item has-submenu"
-                      @click.stop="toggleSubmenu('playlist')"
-                      :class="{ 'is-active': openSubmenuId === 'playlist' }"
-                    >
-                      <div class="menu-content">
-                        <svg
-                          viewBox="0 0 24 24"
-                          width="16"
-                          height="16"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        >
-                          <path d="M19 11H5m14-6H5m9 12H5"></path>
-                          <path d="M17 17v6m3-3h-6"></path>
-                        </svg>
-                        <span>收藏到歌单</span>
-                        <span class="arrow" :class="{ rotate: openSubmenuId === 'playlist' }"
-                          >›</span
-                        >
-                      </div>
-
-                      <transition name="fade">
-                        <div class="submenu" v-show="openSubmenuId === 'playlist'" @click.stop>
-                          <div class="submenu-scroll">
-                            <div
-                              v-for="list in myPlaylists"
-                              :key="list.id"
-                              class="menu-item"
-                              @click.stop="addToPlaylist(list.id, song.id)"
-                            >
-                              <span>{{ list.name }}</span>
-                            </div>
-                            <div v-if="myPlaylists.length === 0" class="empty-tip">暂无歌单</div>
-                          </div>
-                        </div>
-                      </transition>
-                    </div>
-
-                    <div class="menu-item" @click="handleMenuAction('detail', song)">
-                      <svg viewBox="0 0 24 24" width="16" height="16">
-                        <path
-                          d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"
-                          fill="currentColor"
-                        />
-                      </svg>
-                      <span>评论</span>
-                    </div>
                   </div>
                 </transition>
               </div>
-
-              <button class="action-btn like" @click.stop="handleMenuAction('like', song)">
+              <button class="action-btn like">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="18"
@@ -209,25 +122,22 @@
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Player } from '@/stores/index'
-import { userInfo } from '@/stores/userInfo' // 引入 userInfo
 import type { SongItem } from '@/stores/index'
 import { GetMusicFromList, GetMusicListInfo } from '@/api/GetMusicFromList'
-import { GetUserMusicList } from '@/api/GetMusicList' // 引入获取歌单API
-import { AddToLike, AddToMyList } from '@/api/GetMusic' // 引入操作API
+import { GetRecnetList } from '@/api/GetMusicList'
 
 const player = Player()
-const userInfos = userInfo()
 const router = useRouter()
 const route = useRoute()
 
-// --- 状态控制 ---
-const isInitLoading = ref(true) // 初始加载
-const isLoadingMore = ref(false) // 分页加载
+// 状态控制
+const isInitLoading = ref(true) // 初始加载（详情）
+const isLoadingMore = ref(false) // 分页加载（歌曲）
 const hasMore = ref(true) // 是否还有数据
 const loadTrigger = ref<HTMLElement | null>(null) // 触底 DOM
 let observer: IntersectionObserver | null = null
 
-// --- 分页参数 ---
+// 分页参数
 const limit = 100
 const offset = ref(0)
 
@@ -250,39 +160,39 @@ const MusicListId = computed(() => {
   return Array.isArray(id) ? Number(id[0]) : Number(id)
 })
 
-// --- 菜单相关状态 ---
 const activeMenuId = ref<number | null>(null)
-const openSubmenuId = ref<string | null>(null) // 二级菜单状态
-const myPlaylists = ref<any[]>([]) // 用户歌单
 
-// 1. 初始化数据
+// 1. 初始化数据：加载歌单详情 + 第一页歌曲
 async function initData() {
   isInitLoading.value = true
+  // 重置状态
   songs.value = []
   offset.value = 0
   hasMore.value = true
 
   try {
-    const id = MusicListId.value
-    if (!id) return
 
     // 获取歌单详情
-    const res = await GetMusicListInfo({ id })
-    const pl = res.playlist
+    // const res = await GetRecnetList()
+    // console.log(res)
+    // const pl = res.data.list
 
-    playlist.value = {
-      id: pl.id,
-      name: pl.name,
-      coverImgUrl: pl.coverImgUrl,
-      description: pl.description || '暂无简介',
-      playCount: pl.playCount,
-      trackCount: pl.trackCount,
-      creator: pl.creator,
-      updateTime: pl.updateTime,
-    }
+    // playlist.value = {
+    //   id: pl.id,
+    //   name: pl.name,
+    //   coverImgUrl: pl.coverImgUrl,
+    //   description: pl.description || '暂无简介',
+    //   playCount: pl.playCount,
+    //   trackCount: pl.trackCount,
+    //   creator: pl.creator,
+    //   updateTime: pl.updateTime,
+    // }
 
-    isInitLoading.value = false
-    await loadMoreSongs() // 加载首屏歌曲
+    // 详情加载完后，开始加载第一页歌曲
+    isInitLoading.value = false // 先显示骨架屏或移除 Loading
+    await loadMoreSongs() // 手动触发第一次加载
+
+    // 初始化 Observer
     setupIntersectionObserver()
   } catch (err) {
     console.error('加载歌单详情失败', err)
@@ -290,20 +200,23 @@ async function initData() {
   }
 }
 
-// 2. 分页加载歌曲
+// 2. 分页加载歌曲逻辑
 async function loadMoreSongs() {
   if (isLoadingMore.value || !hasMore.value) return
 
   isLoadingMore.value = true
   try {
     const id = MusicListId.value
-    const res = await GetMusicFromList({
-      id: id,
+
+    // 注意：确保你的 GetMusicFromList 接口支持 limit 和 offset 参数
+    // 如果是网易云 API，通常参数是 { id, limit, offset }
+    const res = await GetRecnetList({
       limit: limit,
       offset: offset.value,
     })
 
-    const newSongsRaw = res.songs || res.body?.songs || []
+    // 兼容处理：有些接口返回 songs 数组，有些在 body 里
+    const newSongsRaw = res.data.list
 
     if (newSongsRaw.length === 0) {
       hasMore.value = false
@@ -312,19 +225,28 @@ async function loadMoreSongs() {
     }
 
     const formattedSongs = newSongsRaw.map((track: any) => ({
-      id: track.id,
-      cover: track.al.picUrl,
-      name: track.name,
-      alia: track.alia,
-      album: track.al?.name || '未知专辑',
-      artists: track.ar?.map((ar: any) => ({ id: ar.id, name: ar.name })),
-      duration: track.dt ? Math.floor(track.dt / 1000) : 0,
+      id: Number(track.resourceId),
+      cover: track.data.al.picUrl,
+      name: track.data.name,
+      alia: track.data.alia,
+      album: track.data.al?.name || '未知专辑',
+      artists: track.data.ar?.map((ar: any) => ({ id: ar.id, name: ar.name })),
+      duration: track.data.dt ? Math.floor(track.data.dt / 1000) : 0,
     }))
 
+    // 追加数据
     songs.value.push(...formattedSongs)
+
+    // 更新偏移量
     offset.value += newSongsRaw.length
 
-    if (newSongsRaw.length < limit || offset.value >= playlist.value.trackCount) {
+    // 判断是否加载完毕
+    // 方式A: 如果返回数量小于 limit，说明没数据了
+    if (newSongsRaw.length < limit) {
+      hasMore.value = false
+    }
+    // 方式B: 如果 offset 超过了 trackCount
+    if (offset.value >= playlist.value.trackCount) {
       hasMore.value = false
     }
   } catch (err) {
@@ -334,38 +256,35 @@ async function loadMoreSongs() {
   }
 }
 
-// 3. 触底监听
+// 3. 设置触底监听
 function setupIntersectionObserver() {
   if (observer) observer.disconnect()
+
   observer = new IntersectionObserver(
     (entries) => {
+      // 如果 loadTrigger 可见，且还有数据，且不在加载中
       if (entries[0].isIntersecting && hasMore.value && !isLoadingMore.value) {
         loadMoreSongs()
       }
     },
-    { rootMargin: '200px' },
+    {
+      rootMargin: '200px', // 距离底部 200px 时就开始加载，体验更好
+    },
   )
+
   nextTick(() => {
-    if (loadTrigger.value) observer?.observe(loadTrigger.value)
+    if (loadTrigger.value) {
+      observer?.observe(loadTrigger.value)
+    }
   })
 }
 
 // 生命周期
-onMounted(async () => {
+onMounted(() => {
+  
+  
   initData()
   document.addEventListener('click', closeMenu)
-
-  // 获取用户歌单
-  if (userInfos.userId) {
-    try {
-      const res: any = await GetUserMusicList(userInfos.userId)
-      myPlaylists.value = (res.playlist || []).filter(
-        (p: any) => p.creator.userId === userInfos.userId,
-      )
-    } catch (e) {
-      console.error('获取用户歌单失败', e)
-    }
-  }
 })
 
 onUnmounted(() => {
@@ -373,6 +292,7 @@ onUnmounted(() => {
   document.removeEventListener('click', closeMenu)
 })
 
+// 监听路由变化（切换歌单时）
 watch(
   () => MusicListId.value,
   (newId) => {
@@ -401,12 +321,13 @@ function formatTime(s: number) {
   return `${m}:${sc}`
 }
 
-// --- 播放控制 ---
 const playAll = async () => {
   if (songs.value.length) {
     player.playFM = false
     player.playnormal = true
     player.nextSongUrl = null
+    // 注意：这里只添加了当前已加载的歌曲
+    // 如果要播放全部3000首，逻辑需要调整（比如只播放当前列表，后续自动加载，或者获取所有ID）
     await player.addWholePlaylist(songs.value.map((s) => s.id))
     await player.playcurrentSong(songs.value[0].id)
     player.loadPlaylistData()
@@ -417,6 +338,7 @@ const playSong = async (song: SongItem, index: number) => {
   player.playFM = false
   player.playnormal = true
   player.nextSongUrl = null
+  // 同上，添加到播放列表的是当前已加载的歌曲
   await player.addWholePlaylist(songs.value.map((s) => s.id))
   await player.playcurrentSong(song.id)
   player.loadPlaylistData()
@@ -426,48 +348,19 @@ const TurnIn = (artistid: number) => {
   router.push({ name: 'artist', params: { id: artistid } })
 }
 
-// --- 菜单控制逻辑 ---
-
-// 1. 切换主菜单
 const toggleMenu = (id: number) => {
   if (activeMenuId.value === id) {
-    closeMenu()
+    activeMenuId.value = null
   } else {
     activeMenuId.value = id
-    openSubmenuId.value = null // 切换时重置二级菜单
   }
 }
 
-// 2. 切换二级菜单
-const toggleSubmenu = (key: string) => {
-  if (openSubmenuId.value === key) {
-    openSubmenuId.value = null
-  } else {
-    openSubmenuId.value = key
-  }
-}
-
-// 3. 关闭所有
 const closeMenu = () => {
   activeMenuId.value = null
-  openSubmenuId.value = null
 }
 
-// 4. 添加到歌单 API
-const addToPlaylist = async (pid: number, songId: number) => {
-  try {
-    const res: any = await AddToMyList({ op: 'add', listid: pid, songid: songId })
-    if (res.body.code === 200) console.log('添加成功')
-  } catch (error) {
-    console.error(error)
-  }
-  closeMenu()
-}
-
-// 5. 菜单动作处理
 const handleMenuAction = async (action: string, song: SongItem) => {
-  if (action === 'playlist') return
-
   closeMenu()
   switch (action) {
     case 'next':
@@ -475,31 +368,20 @@ const handleMenuAction = async (action: string, song: SongItem) => {
       player.nextSongUrl = null
       break
     case 'like':
-      try {
-        const res: any = await AddToLike({ id: song.id, like: 'true' })
-        if (res.code === 200) console.log('已喜欢')
-      } catch (e) {
-        console.error(e)
-      }
       break
     case 'detail':
-      console.log('详情', song.name)
-      router.push({ name: 'comment', params: { id: song.id } })
       break
   }
 }
 </script>
 
 <style scoped lang="scss">
+// ... 保留你原有的所有样式 ...
 $bg-color: #1c1c1e;
 $item-hover: rgba(255, 255, 255, 0.06);
 $text-main: #e0e0e0;
 $text-sub: #888888;
 $primary: #0bdc9a;
-
-// 菜单专用颜色 (RGB格式)
-$menu-bg: #1c1c1e;
-$menu-hover: #3a3a3a;
 
 .playlist-page {
   padding: 30px;
@@ -518,6 +400,7 @@ $menu-hover: #3a3a3a;
   align-items: center;
   justify-content: center;
   height: 200px;
+
   .loading-spinner {
     width: 40px;
     height: 40px;
@@ -529,18 +412,20 @@ $menu-hover: #3a3a3a;
   }
 }
 
-/* 底部加载更多 */
+// 底部加载更多样式
 .load-more-trigger {
   padding: 20px 0;
   text-align: center;
   color: $text-sub;
   font-size: 13px;
-  min-height: 50px;
+  min-height: 50px; // 确保有高度供 Observer 检测
+
   .loading-more {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+
     .mini-spinner {
       width: 16px;
       height: 16px;
@@ -550,6 +435,7 @@ $menu-hover: #3a3a3a;
       animation: spin 0.8s linear infinite;
     }
   }
+
   .no-more {
     opacity: 0.5;
   }
@@ -561,7 +447,7 @@ $menu-hover: #3a3a3a;
   }
 }
 
-/* 歌单头部 */
+
 .playlist-header {
   display: flex;
   gap: 30px;
@@ -659,8 +545,6 @@ $menu-hover: #3a3a3a;
     transform: scale(0.95) !important;
   }
 }
-
-/* 列表部分 */
 .song-list-container {
   max-width: 100%;
 }
@@ -845,14 +729,11 @@ $menu-hover: #3a3a3a;
     }
   }
 }
-
-/* 更多操作容器 */
 .more-container {
   flex-shrink: 0;
   opacity: 1;
   transition: opacity 0.2s ease;
-  position: relative; // 关键：作为定位锚点
-
+  position: relative;
   .is-active & {
     opacity: 1;
   }
@@ -877,115 +758,37 @@ $menu-hover: #3a3a3a;
     }
   }
 }
-
-/* --- 下拉菜单样式 (复刻 NewSongs) --- */
 .dropdown-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  width: 160px;
-  /* 使用 rgba 配合 RGB 变量 */
-  background-color: rgba($menu-bg, 0.6);
+  width: 150px;
+  background-color: #1c1c1e;
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   padding: 6px;
   z-index: 100;
   margin-top: 4px;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  overflow: visible !important;
-
-  /* 模糊特效 */
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  transition: background 0.3s ease;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  color: #ddd;
-  font-size: 13px;
-  transition: background-color 0.2s;
-  position: relative;
-
-  &:hover,
-  &.is-active {
-    background-color: $menu-hover;
-    color: #fff;
-  }
-  svg {
-    margin-right: 10px;
-    opacity: 0.8;
-    flex-shrink: 0;
+  .menu-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #ddd;
+    font-size: 13px;
+    transition: background-color 0.2s;
+    &:hover {
+      background-color: #3a3a3a;
+      color: #fff;
+    }
+    svg {
+      margin-right: 10px;
+      opacity: 0.8;
+    }
   }
 }
-
-/* 二级菜单内容 */
-.menu-content {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-.arrow {
-  margin-left: auto;
-  font-size: 16px;
-  color: #888;
-  line-height: 1;
-  transition: transform 0.2s ease;
-  &.rotate {
-    transform: rotate(90deg);
-  }
-}
-
-/* 二级菜单本体 */
-.submenu {
-  position: absolute;
-  top: -4px;
-  right: 100%;
-  margin-right: 8px;
-  width: 180px;
-  background-color: rgba($menu-bg, 0.5);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  z-index: 101;
-  padding: 6px;
-
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
-
-.submenu-scroll {
-  max-height: 280px;
-  overflow-y: auto;
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: #444;
-    border-radius: 2px;
-  }
-}
-
-.submenu .menu-item {
-  padding: 8px 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
-
-.empty-tip {
-  padding: 10px;
-  text-align: center;
-  color: #666;
-  font-size: 12px;
-}
-
-/* 动画 */
 .fade-enter-active,
 .fade-leave-active {
   transition:
@@ -996,14 +799,5 @@ $menu-hover: #3a3a3a;
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-5px);
-}
-@keyframes bounce {
-  0%,
-  100% {
-    transform: scaleY(0.6);
-  }
-  50% {
-    transform: scaleY(1);
-  }
 }
 </style>

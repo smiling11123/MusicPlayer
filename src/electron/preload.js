@@ -1,4 +1,3 @@
-
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -16,5 +15,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendLyricUpdate: (data) => ipcRenderer.send('update-lyric-info', data),
   setIgnoreMouse: (ignore) => ipcRenderer.send('set-ignore-mouse-events', ignore),
   onLyricUpdate: (callback) => ipcRenderer.on('on-lyric-update', callback),
-  removeLyricListener: (callback) => ipcRenderer.removeListener('on-lyric-update', callback)
+  removeLyricListener: (callback) => ipcRenderer.removeListener('on-lyric-update', callback),
+  onMainWindowMoving: (callback) => ipcRenderer.on('main-window-moving', callback),
+  deskLyricStatus: (callback) => ipcRenderer.on('deskLyric-Status', callback),
+  // Auto Updater
+  checkForUpdate: () => ipcRenderer.send('check-for-update'),
+  downloadUpdate: () => ipcRenderer.send('download-update'),
+  quitAndInstall: () => ipcRenderer.send('quit-and-install'),
+  onAutoUpdaterMessage: (callback) => ipcRenderer.on('auto-updater-message', callback),
 })

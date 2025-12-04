@@ -162,8 +162,20 @@ $bg-dark: #1c1c1e;
 .Show-PlayList {
   width: 100%;
   height: 100%;
-  background-color: $bg-dark;
+  padding-top: 50px;
+  padding-bottom: 65px;
+  background-color: #1c1c1e;
   color: $text-main;
+  /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%); 
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  
+  /* 开启硬件加速 */
+  transform: translateZ(0); 
+  will-change: transform;
+  
+  /* 可选：添加细微的边框线增强层次感 */
+  transition: background 0.3s ease;
 }
 
 // --- 滚动容器 ---

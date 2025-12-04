@@ -53,3 +53,34 @@ export const GetMusicPicUrl = async (params) => {
     params,
   }).then((res) => res.data.songs[0].al.picUrl)
 }
+//获取评论
+export const GetMusicComment = async (params) => {
+  return request({
+    url: '/comment/music',
+    params: withCookie({id: params?.id, limit: params?.limit, offset: params?.offset }),
+  }).then((res) => res.data)
+}
+// 添加至我喜欢
+export const AddToLike = async (params) => {
+  return request({
+    url: '/like',
+    params: withCookie({id: params?.id, like: params?.like})
+  }).then((res) => res.data)
+}
+
+//添加至我的歌单
+export const AddToMyList = async (params) => {
+  return request({
+    url: '/playlist/tracks',
+    params: withCookie({op: params?.op, pid: params?.listid, tracks: params?.songid })
+  }).then((res) => res.data)
+} 
+
+//评论
+export const SendComment = async (params) => {
+  return request({
+    url: '/comment',
+    params: withCookie({t: params?.t, type: params?.type, id: params?.id, content: params?.content, commentId: params?.commentId }),
+    method: 'post',
+  }).then((res) => res.data)
+}

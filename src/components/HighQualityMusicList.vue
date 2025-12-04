@@ -50,7 +50,7 @@
             <div class="hq-card" @click="TurnIn(item)">
               <img :src="item.image" alt="" class="hq-img" loading="lazy" />
 
-              <div class="hq-badge" v-if="!pagecontroler.ShowPlayList">
+              <div class="hq-badge" >
                 {{ item.badgeText || '每日推荐' }}
               </div>
 

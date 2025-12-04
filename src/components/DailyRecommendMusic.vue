@@ -56,7 +56,7 @@
             </div>
 
             <div class="right-actions">
-              <div class="more-container">
+              <div class="more-container" @dblclick.stop>
                 <button class="more" @click.stop="toggleMenu(song.id)">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                     <path
@@ -73,6 +73,7 @@
                       </svg>
                       <span>下一首播放</span>
                     </div>
+
                     <div class="menu-item" @click="handleMenuAction('like', song)">
                       <svg viewBox="0 0 24 24" width="16" height="16">
                         <path
@@ -82,6 +83,47 @@
                       </svg>
                       <span>添加到我喜欢</span>
                     </div>
+
+                    <div
+                      class="menu-item has-submenu"
+                      @click.stop="toggleSubmenu('playlist')"
+                      :class="{ 'is-active': openSubmenuId === 'playlist' }"
+                    >
+                      <div class="menu-content">
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="16"
+                          height="16"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M19 11H5m14-6H5m9 12H5"></path>
+                          <path d="M17 17v6m3-3h-6"></path>
+                        </svg>
+                        <span>收藏到歌单</span>
+                        <span class="arrow" :class="{ rotate: openSubmenuId === 'playlist' }"
+                          >›</span
+                        >
+                      </div>
+
+                      <transition name="fade">
+                        <div class="submenu" v-show="openSubmenuId === 'playlist'" @click.stop>
+                          <div class="submenu-scroll">
+                            <div
+                              v-for="list in myPlaylists"
+                              :key="list.id"
+                              class="menu-item"
+                              @click.stop="addToPlaylist(list.id, song.id)"
+                            >
+                              <span>{{ list.name }}</span>
+                            </div>
+                            <div v-if="myPlaylists.length === 0" class="empty-tip">暂无歌单</div>
+                          </div>
+                        </div>
+                      </transition>
+                    </div>
+
                     <div class="menu-item" @click="handleMenuAction('detail', song)">
                       <svg viewBox="0 0 24 24" width="16" height="16">
                         <path
@@ -89,12 +131,13 @@
                           fill="currentColor"
                         />
                       </svg>
-                      <span>更多详情</span>
+                      <span>评论</span>
                     </div>
                   </div>
                 </transition>
               </div>
-              <button class="action-btn like">
+
+              <button class="action-btn like" @click.stop="handleMenuAction('like', song)">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="18"
@@ -121,14 +164,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Player } from '@/stores/index'
+import { userInfo } from '@/stores/userInfo' // 引入用户信息 Store
 import type { SongItem } from '@/stores/index'
-import { GetMusicDetail } from '@/api/GetMusic'
-import { GetDailyRecommendMusic } from '@/api/GetMusicList'
+import { GetMusicDetail, AddToLike, AddToMyList } from '@/api/GetMusic' // 引入操作API
+import { GetDailyRecommendMusic, GetUserMusicList } from '@/api/GetMusicList' // 引入列表API
 
 const player = Player()
+const userInfos = userInfo()
 const route = useRoute()
 const router = useRouter()
 const isLoading = ref(true)
@@ -136,66 +181,47 @@ const isLoading = ref(true)
 const songs = ref<SongItem[]>([])
 const currentSongId = computed(() => player.currentSong || null)
 
+// --- 菜单相关状态 ---
+const activeMenuId = ref<number | null>(null)
+const openSubmenuId = ref<string | null>(null) // 二级菜单状态
+const myPlaylists = ref<any[]>([]) // 用户歌单
+
 const ArtistId = computed(() => {
   const artistid = route.params.id
   return Array.isArray(artistid) ? Number(artistid[0]) : Number(artistid)
 })
-const activeMenuId = ref<number | null>(null)
 
+// 加载歌单和歌曲数据
 async function loadPlaylistData() {
   isLoading.value = true
   try {
     const res = await GetDailyRecommendMusic()
-    const hotsongs = res.data.dailySongs
-    console.log(hotsongs)
-    const pl = res.artist
-    const playlist = ref()
-    console.log(hotsongs)
-    console.log(pl)
-    const songlist = hotsongs
-    playlist.value = songlist.map((song: any) => ({
-      id: song.id,
-    }))
-    const idRes: any = playlist.value
-    console.log('MusicIdList response:', idRes)
+    const hotsongs = res.data.dailySongs || []
 
-    // 从响应中提取 id 列表（根据你的后端结构调整）
-    let ids: number[] = []
-    if (Array.isArray(idRes)) {
-      ids = idRes.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-    } else if (Array.isArray(idRes?.ids)) {
-      ids = idRes.ids.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-    } else if (Array.isArray(idRes?.data)) {
-      ids = idRes.data.map((v: any) => (typeof v === 'object' ? (v.id ?? v) : v))
-    } else if (idRes?.id) {
-      ids = [idRes.id]
-    }
-    playlist.value = ids
+    // 提取 ID
+    const ids = hotsongs.map((v: any) => v.id)
+
     try {
-      const songIds = playlist.value // 假设是 number[]
       const results = await Promise.all(
-        songIds.map((id) =>
-          GetMusicDetail({ ids: id }) // 单个请求
-            .then((res) => res) // 提取数据
+        ids.map((id: number) =>
+          GetMusicDetail({ ids: id })
+            .then((res) => res)
             .catch((err) => {
               console.error(`歌曲 ${id} 加载失败:`, err)
-              return null // 失败时返回null
+              return null
             }),
         ),
       )
-      songs.value = results
-        .filter(Boolean) // 移除null
-        .map((song) => ({
-          id: song.songs[0].id,
-          name: song.songs[0].name,
-          album: song.songs[0].al?.name || '未知专辑',
-          artists: song.songs[0].ar?.map((ar) => ({ id: ar.id, name: ar.name })),
-          duration: song.songs[0].dt ? Math.floor(song.songs[0].dt / 1000) : 0,
-          cover: song.songs[0].al?.picUrl || '',
-        }))
+      songs.value = results.filter(Boolean).map((song: any) => ({
+        id: song.songs[0].id,
+        name: song.songs[0].name,
+        album: song.songs[0].al?.name || '未知专辑',
+        artists: song.songs[0].ar?.map((ar: any) => ({ id: ar.id, name: ar.name })),
+        duration: song.songs[0].dt ? Math.floor(song.songs[0].dt / 1000) : 0,
+        cover: song.songs[0].al?.picUrl || '',
+      }))
     } catch (error) {
-      console.error('加载歌曲失败:', error)
-    } finally {
+      console.error('加载歌曲详情失败:', error)
     }
   } catch (err) {
     console.error(err)
@@ -204,24 +230,34 @@ async function loadPlaylistData() {
   }
 }
 
-onMounted(loadPlaylistData)
+// 初始化
+onMounted(async () => {
+  document.addEventListener('click', closeMenu)
+  loadPlaylistData()
+
+  // 获取用户创建的歌单（用于添加到歌单功能）
+  if (userInfos.userId) {
+    try {
+      const res: any = await GetUserMusicList(userInfos.userId)
+      myPlaylists.value = (res.playlist || []).filter(
+        (p: any) => p.creator.userId === userInfos.userId,
+      )
+    } catch (e) {
+      console.error('获取歌单失败', e)
+    }
+  }
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeMenu)
+})
+
 watch(
   () => ArtistId.value,
   (v) => v && loadPlaylistData(),
 )
 
-function formatPlayCount(n: number) {
-  if (n > 100000000) return (n / 100000000).toFixed(1) + '亿'
-  if (n > 10000) return (n / 10000).toFixed(1) + '万'
-  return n
-}
-
-function formatDate(timestamp: number) {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
-}
-
+// --- 辅助函数 ---
 function formatTime(s: number) {
   const m = Math.floor(s / 60)
     .toString()
@@ -230,59 +266,79 @@ function formatTime(s: number) {
   return `${m}:${sc}`
 }
 
-const playAll = async () => {
-  if (songs.value.length) {
-    player.playFM = false
-    player.playnormal = true
-    await player.addWholePlaylist(songs.value.map((s) => s.id))
-    player.nextSongUrl = null
-    await player.playcurrentSong(songs.value[0].id)
-    player.loadPlaylistData()
-  }
-}
-
 const playSong = async (song: SongItem, index: number) => {
   player.playFM = false
   player.playnormal = true
   await player.addWholePlaylist(songs.value.map((s) => s.id))
   player.nextSongUrl = null
   await player.playcurrentSong(song.id)
-  player.loadPlaylistData()
+  player.loadPlaylistData() // 只有需要刷新播放列表时才调用
 }
 
 const TurnIn = (artistid: number) => {
   router.push({ name: 'artist', params: { id: artistid } })
 }
 
-const closeMenu = () => {
-  activeMenuId.value = null
-}
+// --- 菜单控制逻辑 (核心) ---
 
+// 1. 切换主菜单
 const toggleMenu = (id: number) => {
   if (activeMenuId.value === id) {
-    activeMenuId.value = null // 如果点击的是当前已打开的，则关闭
+    closeMenu()
   } else {
-    activeMenuId.value = id // 打开新的
+    activeMenuId.value = id
+    openSubmenuId.value = null // 切换时重置二级菜单
   }
 }
 
-// 菜单操作处理
+// 2. 切换二级菜单
+const toggleSubmenu = (key: string) => {
+  if (openSubmenuId.value === key) {
+    openSubmenuId.value = null
+  } else {
+    openSubmenuId.value = key
+  }
+}
+
+// 3. 关闭所有
+const closeMenu = () => {
+  activeMenuId.value = null
+  openSubmenuId.value = null
+}
+
+// 4. 添加到歌单 API
+const addToPlaylist = async (pid: number, songId: number) => {
+  try {
+    const res: any = await AddToMyList({ op: 'add', listid: pid, songid: songId })
+    if (res.body.code === 200) console.log('添加成功')
+  } catch (error) {
+    console.error(error)
+  }
+  closeMenu()
+}
+
+// 5. 菜单通用动作
 const handleMenuAction = async (action: string, song: SongItem) => {
-  closeMenu() // 操作后关闭菜单
+  if (action === 'playlist') return
+
+  closeMenu()
 
   switch (action) {
     case 'next':
-      console.log('下一首播放', song.name)
       await player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
       player.nextSongUrl = null
       break
     case 'like':
-      console.log('喜欢', song.name)
-      // 调用你的喜欢 API
+      try {
+        const res: any = await AddToLike({ id: song.id, like: 'true' })
+        if (res.code === 200) console.log('已喜欢')
+      } catch (e) {
+        console.error(e)
+      }
       break
     case 'detail':
-      console.log('详情', song.name)
-      // router.push(...)
+      console.log('查看详情', song.name)
+      router.push({ name: 'comment', params: { id: song.id } })
       break
   }
 }
@@ -290,11 +346,14 @@ const handleMenuAction = async (action: string, song: SongItem) => {
 
 <style scoped lang="scss">
 // 变量定义
-$bg-color: #121212; // 你截图中的深色背景
+$bg-color: #121212;
 $item-hover: rgba(255, 255, 255, 0.06);
 $text-main: #e0e0e0;
 $text-sub: #888888;
 $primary: #0bdc9a;
+
+$menu-bg: #1c1c1e;
+$menu-hover: #3a3a3a;
 
 .playlist-page {
   padding: 30px;
@@ -325,123 +384,6 @@ $primary: #0bdc9a;
   }
 }
 
-// --- 头部 ---
-.playlist-header {
-  display: flex;
-  gap: 30px;
-  margin-bottom: 40px;
-
-  .cover-wrap {
-    width: 200px;
-    height: 200px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-
-    .cover {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-  }
-
-  .info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-
-    .title-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-
-      .tag {
-        border: 1px solid $primary;
-        color: $primary;
-        font-size: 13px;
-        padding: 2px 6px;
-        border-radius: 4px;
-      }
-
-      .title {
-        font-size: 30px;
-        font-weight: 700;
-        line-height: 1.2;
-        margin: 0;
-      }
-    }
-
-    .creator-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-      font-size: 13px;
-      color: $text-sub;
-
-      .avatar {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-      }
-      .name {
-        color: #ccc;
-        cursor: pointer;
-        &:hover {
-          color: #fff;
-        }
-      }
-    }
-
-    .description-wrapper {
-      flex: 1;
-      .description {
-        font-size: 14px;
-        color: $text-sub;
-        line-height: 1.6;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-    }
-
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      margin-top: 15px;
-
-      .stats-text {
-        font-size: 13px;
-        color: $text-sub;
-      }
-    }
-  }
-}
-.play-all-btn {
-  bottom: 12px;
-  right: 12px;
-  width: 50px;
-  height: 50px;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  transform: translate(0, 5px); // 默认向下偏移一点
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-
-  &:hover {
-    transform: scale(1) !important;
-    background: rgba(255, 255, 255, 0.2);
-  }
-  &:active {
-    transform: scale(0.95) !important;
-  }
-}
 // --- 列表部分 ---
 .song-list-container {
   max-width: 100%;
@@ -457,7 +399,7 @@ $primary: #0bdc9a;
 
   .col-cover {
     width: 80px;
-  } // 包含序号宽 + 封面宽
+  }
   .col-title {
     flex: 2;
   }
@@ -478,8 +420,8 @@ $primary: #0bdc9a;
 
 .song-item {
   display: flex;
-  align-items: center; // 关键：垂直居中
-  height: 60px; // 固定高度，防止太高
+  align-items: center;
+  height: 60px;
   padding: 0 10px;
   border-radius: 6px;
   transition: all 0.2s;
@@ -487,7 +429,6 @@ $primary: #0bdc9a;
 
   &:hover {
     background-color: $item-hover;
-
     .cover-container .play-mask {
       opacity: 1;
     }
@@ -498,7 +439,6 @@ $primary: #0bdc9a;
 
   &.playing {
     background-color: rgba($primary, 0.1);
-
     .song-title {
       color: $primary;
     }
@@ -577,26 +517,20 @@ $primary: #0bdc9a;
 
   // 3. 歌名 + 歌手
   .main-info {
-    flex: 2; // 占据主要空间
+    flex: 2;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    overflow: hidden; // 必须，否则无法省略
+    overflow: hidden;
     margin-right: 20px;
 
     .song-title {
       font-size: 15px;
       color: $text-main;
       margin-bottom: 2px;
-      white-space: nowrap; // 不换行
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-
-      .alia {
-        color: $text-sub;
-        margin-left: 4px;
-        font-size: 13px;
-      }
     }
 
     .song-artist {
@@ -639,7 +573,7 @@ $primary: #0bdc9a;
       border: none;
       color: $text-sub;
       cursor: pointer;
-      opacity: 0; // 默认隐藏
+      opacity: 0;
       padding: 4px;
       &:hover {
         color: #fff;
@@ -653,13 +587,14 @@ $primary: #0bdc9a;
     }
   }
 }
+
+// 更多按钮容器
 .more-container {
   flex-shrink: 0;
-  opacity: 1; // 默认隐藏
+  opacity: 1;
   transition: opacity 0.2s ease;
-  position: relative; // 关键：作为绝对定位下拉菜单的锚点
+  position: relative; // 关键
 
-  // 如果菜单打开，保持按钮显示
   .is-active & {
     opacity: 1;
   }
@@ -679,12 +614,9 @@ $primary: #0bdc9a;
       background: rgba(255, 255, 255, 0.1);
       color: #fff;
     }
-
-    // 菜单打开时的按钮激活态
     .is-active & {
       color: #fff;
     }
-
     svg {
       width: 100%;
       height: 100%;
@@ -693,56 +625,126 @@ $primary: #0bdc9a;
   }
 }
 
-/* --- 修改点 4: 下拉菜单样式 --- */
+/* --- 下拉菜单样式 (复刻 NewSongs) --- */
 .dropdown-menu {
   position: absolute;
-  top: 100%; // 在按钮正下方
-  right: 0; // 右对齐
-  width: 50px;
-  background-color: #1c1c1e;
+  top: 100%;
+  right: 0;
+  width: 160px; // 宽度修正为 160px
+  background-color: rgba($menu-bg, 0.6); // 修正颜色
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   padding: 6px;
-  z-index: 100; // 确保浮在最上层
-  margin-top: 4px; // 稍微有点间距
+  z-index: 100;
+  margin-top: 4px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: visible !important; // 允许二级菜单显示
 
-  .menu-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    color: #ddd;
-    font-size: 13px;
-    transition: background-color 0.2s;
+  // 模糊效果
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  transition: background 0.3s ease;
+}
 
-    &:hover {
-      background-color: #3a3a3a;
-      color: #fff;
-    }
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #ddd;
+  font-size: 13px;
+  transition: background-color 0.2s;
+  position: relative;
 
-    svg {
-      margin-right: 10px;
-      opacity: 0.8;
-    }
+  &:hover,
+  &.is-active {
+    background-color: $menu-hover;
+    color: #fff;
+  }
+
+  svg {
+    margin-right: 10px;
+    opacity: 0.8;
+    flex-shrink: 0;
   }
 }
 
-// 简单的淡入淡出动画
+// 二级菜单相关
+.menu-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+ 
+}
+
+.arrow {
+  margin-left: auto;
+  font-size: 16px;
+  color: #888;
+  line-height: 1;
+  transition: transform 0.2s ease;
+  &.rotate {
+    transform: rotate(90deg);
+  }
+}
+
+.submenu {
+  position: absolute;
+  top: -4px;
+  right: 100%;
+  margin-right: 8px;
+  width: 180px;
+  background-color: rgba($menu-bg, 0.5); // 稍微透明以便区分
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 101;
+  padding: 6px;
+
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.submenu-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+  }
+}
+
+.submenu .menu-item {
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.empty-tip {
+  padding: 10px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+}
+
+// 动画
 .fade-enter-active,
 .fade-leave-active {
   transition:
     opacity 0.2s ease,
     transform 0.2s ease;
 }
-
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-5px);
 }
-// 动画
 @keyframes bounce {
   0%,
   100% {
@@ -752,18 +754,20 @@ $primary: #0bdc9a;
     transform: scaleY(1);
   }
 }
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
 
 // 移动端适配
 @media (max-width: 768px) {
   .list-header {
     display: none;
   }
-  .playlist-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
   .song-item {
     .album-info {
       display: none;

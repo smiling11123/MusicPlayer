@@ -1,36 +1,32 @@
 <template>
-  <!-- 顶部栏 -->
   <div class="Topbar">
     <Topbar />
   </div>
 
-  <!-- 主内容区 -->
   <main class="mainpage">
     <n-split
       direction="horizontal"
-      :default-size="0.3"
-      :max="0.4"
-      :min="0.09"
+      :default-size="0.35"
+      :max="0.22"
+      :min="0.08"
       v-model:size="leftPaneSize"
-      :resize-trigger-size="pagecontroler.IsFold ? 0 : 2"
-      @update:size="onPaneResize"
+      :resize-trigger-size="resizeTriggerSize"
+      @update:size="handleSplitResize"
     >
-      <!-- Pane 1: 左侧 -->
       <template #1>
-        <div class="scroll-pane" v-if="pagecontroler.IsLogin" key="homepage">
+        <div class="scroll-pane left-pane-content" v-if="pagecontroler.IsLogin" key="homepage">
           <Homepage />
         </div>
-        <n-message-provider>
-          <div class="scroll-pane To-login" v-if="!pagecontroler.IsLogin" key="tologin">
+        <n-message-provider v-else>
+          <div class="scroll-pane To-login left-pane-content" key="tologin">
             <ToLogin />
           </div>
         </n-message-provider>
       </template>
 
-      <!-- Pane 2: 中间主内容（保持比例） -->
       <template #2>
-        <div class="center-content" :class="{ 'playlist-open': pagecontroler.ShowPlayList }">
-          <div class="scroll-pane">
+        <div class="center-content">
+          <div class="scroll-pane main-view" ref="Scroll">
             <router-view v-slot="{ Component }">
               <keep-alive :include="cachedComponents">
                 <component :is="Component" :key="route.fullPath" />
@@ -41,16 +37,14 @@
       </template>
     </n-split>
 
-    <!-- 右侧播放列表（抽屉式） -->
     <transition name="slide">
       <div v-show="pagecontroler.ShowPlayList" class="playlist-drawer">
         <div class="playlist-content">
-          <PlayList />
+          <PlayList v-if="hasPlaylistOpened" />
         </div>
       </div>
     </transition>
 
-    <!-- 遮罩层 -->
     <transition name="fade">
       <div
         v-show="pagecontroler.ShowPlayList"
@@ -60,42 +54,43 @@
     </transition>
   </main>
 
-  <!-- 底部栏 -->
   <div class="TouchBar">
     <Touchbar />
   </div>
-  <!-- ✅ 遮罩层（全局，在播放列表和歌词页面之下） -->
+
   <transition name="fade">
-    <div v-show="pagecontroler.ShowLyric" class="global-overlay" @click="closeOverlays"></div>
+    <div v-if="pagecontroler.ShowLyric" class="global-overlay" @click="closeOverlays"></div>
   </transition>
 
-  <!-- ✅ 歌词页面（全屏覆盖，从底部滑出） -->
   <transition name="slide-up">
     <div v-show="pagecontroler.ShowLyric" class="lyric-page">
-      <Lyric></Lyric>
+      <Lyric />
     </div>
   </transition>
 </template>
 
-<script setup ">
-import { ref, onMounted, watch, onUnmounted } from 'vue'
+<script setup>
+import { ref, onMounted, watch, onUnmounted, computed, shallowRef, defineAsyncComponent, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { NSplit } from 'naive-ui'
 import { pagecontrol } from '@/stores/page'
-import { defineAsyncComponent } from 'vue'
 import { Player } from './stores/index'
-import { GetPersonalFM } from './api/GetMusicList'
+import { CheckLoginStatus } from './api/Login'
+
+// 异步组件定义 (保持不变)
 const Topbar = defineAsyncComponent(() => import('@/components/TopBar.vue'))
 const Touchbar = defineAsyncComponent(() => import('./components/TouchBar.vue'))
 const Homepage = defineAsyncComponent(() => import('@/components/HomePage.vue'))
 const ToLogin = defineAsyncComponent(() => import('./components/ToLogin.vue'))
 const PlayList = defineAsyncComponent(() => import('@/components/PlayList.vue'))
 const Lyric = defineAsyncComponent(() => import('@/components/Lyric.vue'))
-import { CheckLoginStatus } from './api/Login'
+
 const pagecontroler = pagecontrol()
 const route = useRoute()
 const player = Player()
-const cachedComponents = ref([
+const Scroll = ref(null)
+// 优化：使用 shallowRef 存储不需要深度响应的数组
+const cachedComponents = shallowRef([
   'Musichub',
   'Lricy',
   'HighQualityMusicList',
@@ -104,83 +99,119 @@ const cachedComponents = ref([
   'SearchResult',
 ])
 
-const handleGlobaltoggle = () => {
-  
-  player.togglePlay()
-}
-const handleGlobalnext = async () => {
-  
-  player.playNextSong()
-}
-const handleGlobalprev = () => {
-  
-  player.playPrevSong()
-}
+// 优化：懒加载标志位
+const hasPlaylistOpened = ref(false)
+// 监听播放列表打开，一旦打开过一次，就置为 true，后续使用 v-show 控制显示隐藏
+watch(
+  () => pagecontroler.ShowPlayList,
+  (val) => {
+    if (val && !hasPlaylistOpened.value) {
+      hasPlaylistOpened.value = true
+    }
+  },
+)
+
+watch(
+  () => route.fullPath,
+  async () => {
+    // 等待 DOM 更新（确保新页面已经渲染）
+    //await nextTick()
+    if (Scroll.value) {
+      // 强制滚动到顶部
+      Scroll.value.scrollTop = 0
+    }
+  }
+)
+// 计算属性优化 trigger size
+const resizeTriggerSize = computed(() => (pagecontroler.IsFold ? 0 : 2))
+
+// Electron IPC 处理 (保持不变)
+const handleGlobaltoggle = () => player.togglePlay()
+const handleGlobalnext = () => player.playNextSong()
+const handleGlobalprev = () => player.playPrevSong()
 
 const code = ref(0)
-onMounted(async () => {
-  //登录状态验证
-  if (localStorage.getItem('neteaseCookie')) {
-    const result = await CheckLoginStatus()
 
-    code.value = result.data.code
-    console.log(code.value)
-    if (code.value === 200) {
-      pagecontroler.IsLogin = true
-    } else {
+onMounted(async () => {
+  // 登录检查逻辑 (保持不变)
+  if (localStorage.getItem('neteaseCookie')) {
+    try {
+      const result = await CheckLoginStatus()
+      code.value = result.data.code
+      pagecontroler.IsLogin = code.value === 200
+    } catch (e) {
+      console.error('Login check failed:', e)
       pagecontroler.IsLogin = false
     }
   } else {
     pagecontroler.IsLogin = false
   }
-  window.electronAPI.global_toggle(handleGlobaltoggle)
-  window.electronAPI.global_next(handleGlobalnext)
-  window.electronAPI.global_prev(handleGlobalprev)
+
+  // 绑定 Electron 事件
+  if (window.electronAPI) {
+    window.electronAPI.global_toggle(handleGlobaltoggle)
+    window.electronAPI.global_next(handleGlobalnext)
+    window.electronAPI.global_prev(handleGlobalprev)
+  }
 })
 
-onUnmounted(async () => {
-  window.electronAPI.remove_toggle(handleGlobaltoggle)
-  window.electronAPI.remove_next(handleGlobalnext)
-  window.electronAPI.remove_prev(handleGlobalprev)
+onUnmounted(() => {
+  if (window.electronAPI) {
+    window.electronAPI.remove_toggle(handleGlobaltoggle)
+    window.electronAPI.remove_next(handleGlobalnext)
+    window.electronAPI.remove_prev(handleGlobalprev)
+  }
 })
-const leftPaneSize = ref(0.2) // 默认展开 20%
 
-// 新增：保存展开时的尺寸
+// Split Pane 逻辑优化
+const leftPaneSize = ref(0.22)
 const expandedSize = ref(0.2)
-// 监听 IsFold 变化
+
+// 优化：分离副作用
 watch(
   () => pagecontroler.IsFold,
   (isFolded) => {
     if (isFolded) {
-      // 折叠：保存当前尺寸，然后设为最小值
-      expandedSize.value = leftPaneSize.value
-      leftPaneSize.value = 0 // 最小值
+      expandedSize.value = leftPaneSize.value > 0.09 ? leftPaneSize.value : 0.2
+      leftPaneSize.value = 0
     } else {
-      // 展开：恢复保存的尺寸
-      leftPaneSize.value = expandedSize.value || 0.2
+      leftPaneSize.value = expandedSize.value
     }
   },
-  { immediate: true },
 )
+
+// 优化：防抖函数 (通用工具应提取)
 const debounce = (fn, delay = 100) => {
   let timer = null
   return (...args) => {
-    timer && clearTimeout(timer)
+    if (timer) clearTimeout(timer)
     timer = setTimeout(() => fn(...args), delay)
   }
 }
-// 监听用户手动调整面板大小
-const onPaneResize = debounce((newSize) => {
-  // 只有在展开状态才保存用户调整的尺寸
+
+// 优化：resize 处理逻辑
+// 直接响应 resize 保证流畅度，只防抖 resize 事件的分发
+const triggerWindowResize = debounce(() => {
+  window.dispatchEvent(new Event('resize'))
+}, 200)
+
+const handleSplitResize = (newSize) => {
+  // 更新内部值 (v-model 自动处理，这里主要处理额外逻辑)
+  // 仅在非折叠状态下记录尺寸
   if (!pagecontroler.IsFold) {
     expandedSize.value = newSize
   }
-  window.dispatchEvent(new Event('resize'))
-}, 150)
+  // 触发全局 resize (如图表重绘)
+  triggerWindowResize()
+}
+
+const closeOverlays = () => {
+  pagecontroler.ShowLyric = false
+}
 </script>
 
 <style scoped lang="scss">
-/* ===== 基础布局不变 ===== */
+/* 核心优化：使用 content-visibility 和 GPU 加速 */
 
 :host {
   display: block;
@@ -189,59 +220,70 @@ const onPaneResize = debounce((newSize) => {
   background: #1c1c1e;
 }
 
-.Topbar {
+/* 固定定位元素提升层级，使用 will-change 提示浏览器优化 */
+.Topbar,
+.TouchBar {
   position: fixed;
-  top: 0;
   left: 0;
   right: 0;
-  height: 50px;
   z-index: 1000;
   background: #1c1c1e;
-  transform: translateZ(0);
+  transform: translateZ(0); /* 开启硬件加速 */
   will-change: transform;
+  background: rgba(28, 28, 30, 0.65); 
+  
+  /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%); 
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  
+  /* 开启硬件加速 */
+  transform: translateZ(0); 
+  will-change: transform;
+  
+  /* 可选：添加细微的边框线增强层次感 */
+  transition: background 0.3s ease;
+}
+
+.Topbar {
+  top: 0;
+  height: 50px;
 }
 
 .TouchBar {
-  position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
   height: 65px;
-  z-index: 1000;
-  background: #1c1c1e;
-  transform: translateZ(0);
-  will-change: transform;
 }
 
 .mainpage {
   position: fixed;
-  top: 50px;
-  bottom: 65px;
+  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-
   box-sizing: border-box;
   transform: translateZ(0);
 }
 
-/* 中间内容区域 - 保持比例不变 */
 .center-content {
   height: 100%;
-  transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* 平滑过渡 */
-}
-
-.center-content.playlist-open {
-  padding-right: 360px; /* 播放列表宽度，保持内容不被挤压 */
+  /* 优化过渡效果，只针对需要的属性 */
+  transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: padding-right;
 }
 
 .scroll-pane {
   height: 100%;
+  padding-top: 50px;
+  padding-bottom: 65px;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
-  contain: layout style paint;
+  /* 关键优化：限制布局重排范围，并利用 content-visibility 跳过视口外渲染 */
+  contain: strict;
+  content-visibility: auto;
   background: #1c1c1e;
+
   &::-webkit-scrollbar {
     display: none;
     width: 0 !important;
@@ -251,131 +293,107 @@ const onPaneResize = debounce((newSize) => {
   -ms-overflow-style: none;
 }
 
-.scroll-pane::-webkit-scrollbar {
-  width: 6px;
-}
-
-.scroll-pane::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
-}
-
-/* ===== 抽屉式播放列表 ===== */
+/* 抽屉优化 */
 .playlist-drawer {
   position: fixed;
   top: 0;
   right: 0;
-  bottom: 0px;
-  width: 360px; /* 固定宽度 */
-
-  // box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+  bottom: 0;
+  width: 360px;
   z-index: 999;
-  contain: layout style paint;
+  /* 提升为合成层，避免重绘主页面 */
+  will-change: transform;
+  transform: translateZ(0);
+  background-color: #1c1c1e; /* 确保有背景，避免透明度混合开销 */
+  /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%); 
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  
+  /* 开启硬件加速 */
+  transform: translateZ(0); 
+  will-change: transform;
+  
+  /* 可选：添加细微的边框线增强层次感 */
+  transition: background 0.3s ease;
 }
 
 .playlist-content {
   height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
+  contain: content; /* 优化滚动性能 */
   &::-webkit-scrollbar {
     display: none;
-    width: 0 !important;
-    height: 0 !important;
   }
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
-/* 滑入动画 */
+/* 动画优化：只变换 transform 和 opacity */
 .slide-enter-active,
 .slide-leave-active {
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.slide-enter-from {
-  transform: translateX(100%);
-}
-
-.slide-enter-to {
-  transform: translateX(0);
-}
-
-.slide-leave-from {
-  transform: translateX(0);
-}
-
+.slide-enter-from,
 .slide-leave-to {
   transform: translateX(100%);
 }
-
-/* 遮罩层 */
+.slide-enter-to,
+.slide-leave-from {
+  transform: translateX(0);
+}
 
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
 }
-
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
 
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .playlist-drawer {
-    width: 100%; /* 移动端全屏 */
-    max-width: 420px;
-  }
-
-  .center-content.playlist-open {
-    padding-right: 0; /* 移动端不推挤内容 */
-  }
-}
-/* 遮罩层（全局覆盖） */
 .global-overlay {
   position: fixed;
-  top: 50px; /* 避开 Topbar */
-  left: 0;
-  right: 0;
-  bottom: 65px; /* 避开 TouchBar */
+  inset: 50px 0 65px 0; /* 使用 inset 简写 */
   background: rgba(0, 0, 0, 0.7);
-  z-index: 1800; /* 在播放列表之下 */
+  z-index: 1800;
+  /* backdrop-filter 性能开销较大，移动端或低端设备可考虑去除 */
   backdrop-filter: blur(4px);
+  transform: translateZ(0);
 }
 
-/* ✅ 歌词页面 - 全屏覆盖 */
 .lyric-page {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: #000000;
-  z-index: 2000; /* ✅ 最高层级，覆盖所有内容 */
+  inset: 0;
+  background: #000;
+  z-index: 2000;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  /* 歌词页通常很重，给予独立层 */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
-/* 从底部滑入动画 */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.slide-up-enter-from {
+.slide-up-enter-from,
+.slide-up-leave-to {
   transform: translateY(100%);
 }
-
-.slide-up-enter-to {
-  transform: translateY(0);
-}
-
+.slide-up-enter-to,
 .slide-up-leave-from {
   transform: translateY(0);
 }
 
-.slide-up-leave-to {
-  transform: translateY(100%);
+/* 响应式 */
+@media (max-width: 768px) {
+  .playlist-drawer {
+    width: 100%;
+    max-width: 100%;
+  }
+  .center-content.playlist-open {
+    padding-right: 0;
+  }
 }
 </style>

@@ -36,7 +36,7 @@
           </div>
         </div>
 
-        <div class="more-container">
+        <div class="more-container" @dblclick.stop>
           <button class="more" @click.stop="toggleMenu(song.id)">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
               <path
@@ -53,6 +53,7 @@
                 </svg>
                 <span>下一首播放</span>
               </div>
+
               <div class="menu-item" @click="handleMenuAction('like', song)">
                 <svg viewBox="0 0 24 24" width="16" height="16">
                   <path
@@ -62,6 +63,45 @@
                 </svg>
                 <span>添加到我喜欢</span>
               </div>
+
+              <div
+                class="menu-item has-submenu"
+                @click.stop="toggleSubmenu('playlist')"
+                :class="{ 'is-active': openSubmenuId === 'playlist' }"
+              >
+                <div class="menu-content">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M19 11H5m14-6H5m9 12H5"></path>
+                    <path d="M17 17v6m3-3h-6"></path>
+                  </svg>
+                  <span>收藏到歌单</span>
+                  <span class="arrow" :class="{ rotate: openSubmenuId === 'playlist' }">›</span>
+                </div>
+
+                <transition name="fade">
+                  <div class="submenu" v-show="openSubmenuId === 'playlist'" @click.stop>
+                    <div class="submenu-scroll">
+                      <div
+                        v-for="list in myPlaylists"
+                        :key="list.id"
+                        class="menu-item"
+                        @click.stop="addToPlaylist(list.id, song.id)"
+                      >
+                        <span>{{ list.name }}</span>
+                      </div>
+                      <div v-if="myPlaylists.length === 0" class="empty-tip">暂无歌单</div>
+                    </div>
+                  </div>
+                </transition>
+              </div>
+
               <div class="menu-item" @click="handleMenuAction('detail', song)">
                 <svg viewBox="0 0 24 24" width="16" height="16">
                   <path
@@ -69,7 +109,7 @@
                     fill="currentColor"
                   />
                 </svg>
-                <span>更多详情</span>
+                <span>评论</span>
               </div>
             </div>
           </transition>
@@ -82,19 +122,21 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Player } from '@/stores/index'
+import { userInfo } from '@/stores/userInfo'
 import { useRouter } from 'vue-router'
-import { GetRecommendNewMusic } from '@/api/GetMusicList'
+import { GetRecommendNewMusic, GetUserMusicList } from '@/api/GetMusicList'
 import type { SongItem } from '@/stores/index'
+import { AddToLike, AddToMyList } from '@/api/GetMusic'
 
 const router = useRouter()
 const player = Player()
+const userInfos = userInfo()
 const songs = ref<SongItem[]>([])
-
-// --- 修改点 1: 使用 ID 控制当前激活的菜单 ---
-const activeMenuId = ref<number | null>(null)
+const activeMenuId = ref<number | null>(null) // 当前打开的一级菜单ID (歌曲ID)
+const openSubmenuId = ref<string | null>(null) // 当前打开的二级菜单ID ('playlist'等)
+const myPlaylists = ref<any[]>([])
 
 onMounted(async () => {
-  // 全局点击监听，用于关闭菜单
   document.addEventListener('click', closeMenu)
 
   try {
@@ -111,66 +153,98 @@ onMounted(async () => {
   } catch (error) {
     console.error('获取新歌失败', error)
   }
+
+  if (userInfos.userId) {
+    try {
+      const res: any = await GetUserMusicList(userInfos.userId)
+      myPlaylists.value = (res.playlist || []).filter(
+        (p: any) => p.creator.userId === userInfos.userId,
+      )
+    } catch (e) {
+      console.error(e)
+    }
+  }
 })
 
 onUnmounted(async () => {
   document.removeEventListener('click', closeMenu)
 })
 
-const playSong = async (song: SongItem) => {
-  console.log('播放:', song.name)
-  await player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
-  player.nextSongUrl = null
-  player.playcurrentSong({ firstId: song.id })
-}
+// --- 菜单控制逻辑优化 ---
 
-const goToAllSongs = () => {
-  router.push({ name: 'WholeNewSongs' })
-}
-
-const TurnIn = (artistid: number) => {
-  router.push({ name: 'artist', params: { id: artistid } })
-}
-
-// --- 修改点 2: 菜单逻辑 ---
-
-// 切换菜单显示
+// 打开主菜单
 const toggleMenu = (id: number) => {
   if (activeMenuId.value === id) {
-    activeMenuId.value = null // 如果点击的是当前已打开的，则关闭
+    closeMenu() // 如果点击当前已打开的，则关闭
   } else {
-    activeMenuId.value = id // 打开新的
+    activeMenuId.value = id
+    openSubmenuId.value = null // 切换歌曲时，重置二级菜单
   }
 }
 
-// 点击空白处关闭
-const closeMenu = () => {
-  activeMenuId.value = null
+// 切换二级菜单显示
+const toggleSubmenu = (key: string) => {
+  if (openSubmenuId.value === key) {
+    openSubmenuId.value = null // 关闭
+  } else {
+    openSubmenuId.value = key // 打开
+  }
 }
 
-// 菜单操作处理
+// 关闭所有菜单
+const closeMenu = () => {
+  activeMenuId.value = null
+  openSubmenuId.value = null
+}
+
+// 菜单动作处理
 const handleMenuAction = async (action: string, song: SongItem) => {
-  closeMenu() // 操作后关闭菜单
+  // 注意：这里不要处理 playlist，playlist 单独由 toggleSubmenu 处理
+  if (action === 'playlist') return
+
+  closeMenu() // 点击普通项后关闭菜单
 
   switch (action) {
     case 'next':
-      console.log('下一首播放', song.name)
       await player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
       player.nextSongUrl = null
       break
     case 'like':
-      console.log('喜欢', song.name)
-      // 调用你的喜欢 API
+      try {
+        const res: any = await AddToLike({ id: song.id, like: 'true' })
+        if (res.code === 200) console.log('已喜欢')
+      } catch (e) {
+        console.error(e)
+      }
       break
     case 'detail':
-      console.log('详情', song.name)
-      // router.push(...)
+      router.push({ name: 'comment', params: { id: song.id } })
       break
   }
 }
+
+const addToPlaylist = async (pid: number, songId: number) => {
+  try {
+    const res: any = await AddToMyList({ op: 'add', listid: pid, songid: songId })
+    if (res.body.code === 200) console.log('添加成功')
+  } catch (error) {
+    console.error(error)
+  }
+  closeMenu()
+}
+
+// 其他辅助函数保持不变
+const playSong = async (song: SongItem) => {
+  await player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
+  player.nextSongUrl = null
+  player.playcurrentSong({ firstId: song.id })
+}
+const goToAllSongs = () => router.push({ name: 'WholeNewSongs' })
+const TurnIn = (artistid: number) => router.push({ name: 'artist', params: { id: artistid } })
 </script>
 
 <style scoped lang="scss">
+/* ... 之前的 Grid 和 Card 样式保持不变 ... */
 $max-width: 1200px;
 $hover-bg: rgba(255, 255, 255, 0.1);
 $text-main: #ffffff;
@@ -230,16 +304,11 @@ $menu-hover: #3a3a3a;
   cursor: default;
   max-width: 270px;
   transition: background-color 0.3s ease;
-  // --- 修改点 3: 移除 overflow: hidden ---
-  // 必须移除这个，否则下拉菜单会被卡片边缘切掉。
-  // 圆角效果现在由 border-radius 自身负责，只要子元素不溢出即可。
-  //overflow: hidden;
-  position: relative; // 确保 z-index 上下文
+  position: relative;
 
   &:hover,
   &.is-active {
     background-color: $hover-bg;
-
     .play-overlay {
       opacity: 1;
     }
@@ -255,7 +324,7 @@ $menu-hover: #3a3a3a;
   height: 48px;
   flex-shrink: 0;
   border-radius: 6px;
-  overflow: hidden; // 图片圆角保持
+  overflow: hidden;
   margin-right: 12px;
 
   img {
@@ -329,11 +398,11 @@ $menu-hover: #3a3a3a;
 /* 更多操作容器 */
 .more-container {
   flex-shrink: 0;
-  opacity: 0; // 默认隐藏
+  opacity: 0; /* 默认隐藏 */
   transition: opacity 0.2s ease;
-  position: relative; // 关键：作为绝对定位下拉菜单的锚点
+  position: relative;
 
-  // 如果菜单打开，保持按钮显示
+  /* 激活状态保持显示 */
   .is-active & {
     opacity: 1;
   }
@@ -354,7 +423,6 @@ $menu-hover: #3a3a3a;
       color: #fff;
     }
 
-    // 菜单打开时的按钮激活态
     .is-active & {
       color: #fff;
     }
@@ -367,69 +435,157 @@ $menu-hover: #3a3a3a;
   }
 }
 
-/* --- 修改点 4: 下拉菜单样式 --- */
+/* --- 下拉菜单样式 --- */
 .dropdown-menu {
   position: absolute;
-  top: 100%; // 在按钮正下方
-  right: 0; // 右对齐
-  width: 50px;
-  background-color: $menu-bg;
+  top: 100%;
+  right: 0;
+  width: 160px;
+  background-color: rgb($menu-bg,0.6);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   padding: 6px;
-  z-index: 100; // 确保浮在最上层
-  margin-top: 4px; // 稍微有点间距
+  z-index: 100;
+  margin-top: 4px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: visible !important;
 
-  .menu-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    color: #ddd;
-    font-size: 13px;
-    transition: background-color 0.2s;
+   /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%); 
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  
+  /* 开启硬件加速 */
+  transform: translateZ(0); 
+  will-change: transform;
+  
+  /* 可选：添加细微的边框线增强层次感 */
+  transition: background 0.3s ease;
+}
 
-    &:hover {
-      background-color: $menu-hover;
-      color: #fff;
-    }
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #ddd;
+  font-size: 13px;
+  transition: background-color 0.2s;
+  position: relative;
 
-    svg {
-      margin-right: 10px;
-      opacity: 0.8;
-    }
+  &:hover,
+  &.is-active {
+    background-color: $menu-hover;
+    color: #fff;
+  }
+
+  svg {
+    margin-right: 10px;
+    opacity: 0.8;
+    flex-shrink: 0;
   }
 }
 
-// 简单的淡入淡出动画
+/* --- 二级菜单样式修改 --- */
+.has-submenu {
+  /* 移除 hover 显示逻辑，完全由 v-show 控制 */
+}
+
+.menu-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.arrow {
+  margin-left: auto;
+  font-size: 16px;
+  color: #888;
+  line-height: 1;
+  transition: transform 0.2s ease; /* 箭头旋转动画 */
+
+  &.rotate {
+    transform: rotate(90deg);
+  }
+}
+
+.submenu {
+  /* 移除 display: none */
+  position: absolute;
+  top: -4px;
+  left: 100%;
+  margin-left: 8px;
+  width: 180px;
+  background-color: rgb($menu-bg,0.9);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  z-index: 101;
+  padding: 6px;
+  
+   /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%); 
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  
+  /* 开启硬件加速 */
+  transform: translateZ(0); 
+  will-change: transform;
+  
+  /* 可选：添加细微的边框线增强层次感 */
+  transition: background 0.3s ease;
+}
+
+.submenu-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 2px;
+  }
+}
+
+.submenu .menu-item {
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.empty-tip {
+  padding: 10px;
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+}
+
+// 动画
 .fade-enter-active,
 .fade-leave-active {
   transition:
     opacity 0.2s ease,
     transform 0.2s ease;
 }
-
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-5px);
 }
 
-/* 响应式调整 */
+/* 响应式 */
 @media (max-width: 1100px) {
   .grid-wrapper {
     grid-template-columns: repeat(3, 1fr);
   }
 }
-
 @media (max-width: 800px) {
   .grid-wrapper {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-
 @media (max-width: 500px) {
   .grid-wrapper {
     grid-template-columns: 1fr;

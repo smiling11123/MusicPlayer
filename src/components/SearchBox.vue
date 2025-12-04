@@ -53,8 +53,12 @@ const clear = () => {
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 800;
   color: #333;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  user-select: none;
   outline: none;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);

@@ -50,7 +50,7 @@
             <div class="hq-card" @click="TurnIn(item)">
               <img :src="item.image" alt="" class="hq-img" loading="lazy" />
 
-              <div class="hq-badge" v-if="!pagecontroler.ShowPlayList">
+              <div class="hq-badge" >
                 {{ item.badgeText || '每日推荐' }}
               </div>
 
@@ -148,7 +148,7 @@ const fetchData = async () => {
       image: m.coverImgUrl,
       title: m.name,
       subtitle: m.copywriter, // 网易云推荐语通常在 copywriter
-      badgeText: m.tags,
+      badgeText: m.tags.join(',').replace(/[["]/g, ''),
       id: m.id,
     }))
   } catch (err) {

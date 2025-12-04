@@ -9,12 +9,45 @@ import WholeNewSongs from '@/components/WholeNewSongs.vue'
 import WholeSearchSongs from '@/components/WholeSearchSongs.vue'
 import MV from '@/components/MV.vue'
 import Video from '@/components/Video.vue'
-import deskLyric from '@/components/deskLyric.vue'
+import RecnetListenList from '@/components/RecnetListenList.vue'
+import WholeMusicHubList from '@/components/WholeMusicHubList.vue'
+import WholeMusicHub from '@/components/WholeMusicHub.vue'
+import WholeMusicHubRank from '@/components/WholeMusicHubRank.vue'
+import Comment from '@/components/Comment.vue'
+import WholeMusicHubArtist from '@/components/WholeMusicHubArtist.vue'
 const routes = [
   {
     path: '/',
     name: 'Hub',
     component: Musichub,
+  },
+  {
+    path: '/WholeMusicHub',
+    name: 'wholemusichub',
+    component: WholeMusicHub,
+    redirect: '/WholeMusicHub/WholeMusicHubList',
+    children: [
+      {
+        path: '/WholeMusicHub/WholeMusicHubList',
+        name: 'wholemusichublist',
+        component: WholeMusicHubList,
+      },
+      {
+        path: '/WholeMusicHub/WholeMusicHubRank',
+        name: 'wholemusichubrank',
+        component: WholeMusicHubRank,
+      },
+      {
+        path: '/WholeMusicHub/WholeMusicHubArtist',
+        name: 'wholemusichubartist',
+        component: WholeMusicHubArtist,
+      },
+    ],
+  },
+  {
+    path: '/comment/:id',
+    name: 'comment',
+    component: Comment,
   },
   {
     path: '/SearchResult/artist/:id',
@@ -35,6 +68,11 @@ const routes = [
     path: '/musiclist/:id',
     name: 'musiclist',
     component: MusicList,
+  },
+  {
+    path: '/recentListen',
+    name: 'recentListen',
+    component: RecnetListenList,
   },
   {
     path: '/SearchResult/musiclist/:id',
@@ -80,15 +118,6 @@ const routes = [
     path: '/SearchResult/video/:id',
     name: 'searchvideo',
     component: Video,
-  },
-  {
-    path: '/desktop-lyric',
-    name: 'DesktopLyric',
-    component: deskLyric,
-    meta: { 
-      title: '桌面歌词' ,
-      isDeskLyric: true,
-    },
   },
 ]
 

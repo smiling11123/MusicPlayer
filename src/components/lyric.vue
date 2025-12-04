@@ -591,6 +591,47 @@ const handleTouchEnd = () => {
 }
 
 watch(
+  // 监听当前索引和歌词数组的变化
+  [() => activeIndex.value, () => lyricLines.value, () => player.currentSongDetail],
+  ([newIndex, newLines, newSong]) => {
+    // 确保 Electron API 可用
+    if (!window.electronAPI || !pagecontroler.ShowDeskLyric) return
+
+    const currentLine = newLines[newIndex]
+
+    // 情况1: 有歌词行
+    if (currentLine) {
+      // 如果是间奏 (isInterlude)，可以显示特定的符号，或者显示"间奏"
+      if (currentLine.isInterlude) {
+        window.electronAPI.sendLyricUpdate({
+          text: '• • •', // 或者 '间奏'
+          trans: '',
+        })
+      } else {
+        // 正常歌词
+        window.electronAPI.sendLyricUpdate({
+          text: currentLine.text, // 歌词文本
+          // 注意：你的组件里叫 translation，桌面歌词组件接收的是 trans，这里要做个映射
+          trans: currentLine.translation || '',
+        })
+      }
+    }
+    // 情况2: 列表为空 (纯音乐 或 歌词未加载)
+    else {
+      // 显示歌名
+      const songName = newSong?.name || '等待播放...'
+      const artistName = newSong?.artists?.[0]?.name || ''
+
+      window.electronAPI.sendLyricUpdate({
+        text: songName,
+        trans: artistName, // 副标题显示歌手名
+      })
+    }
+  },
+  { immediate: true }, // 立即执行一次，确保打开页面就有内容
+)
+
+watch(
   () => currentTime.value,
   (newTime) => {
     updateActiveIndex(newTime)
@@ -600,7 +641,6 @@ watch([activeIndex, isUserScrolling], () => {
   if (!isUserScrolling.value) {
     nextTick(() => {
       calculateScrollPosition()
-
       manualOffset.value = 0
     })
   }

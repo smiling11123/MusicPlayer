@@ -6,3 +6,11 @@ export const GetAlbum = async (param) => {
         params: {id: param}
     }).then((res) => res.data)
 }
+
+
+export const GetArtistAlbum = async (params) => {
+    return request({
+        url: '/artist/album',
+        params: {id: params?.id, limit: params?.limit || 20, offset: params?.offset },
+    }).then((res) => res.data)
+}

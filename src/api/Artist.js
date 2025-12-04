@@ -21,3 +21,10 @@ export const GetArtistSongs = async (param) => {
         params: {id: param.id, offset: param.offset, limit: param.limit},
     }).then((res) => res.data)
 }
+
+export const GetArtistList = async (params) => {
+    return request({
+        url: '/artist/list',
+        params: {type: params?.type, area: params?.area, limit: params?.limit, offset: params?.offset, initial: params?.initial}
+    }).then((res) => res.data)
+}

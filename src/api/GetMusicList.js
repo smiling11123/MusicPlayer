@@ -117,3 +117,27 @@ export const GetUserMusicList = async (param) => {
     params: withCookie({uid: param})
   }).then((res) => res.data)
 }
+
+//获取最近听过
+export const GetRecnetList = async (params) => {
+  return request({
+    url: '/record/recent/song',
+    params: withCookie({limit: params?.limit, offset: params?.offset}),
+  }).then((res) => res.data)
+}
+
+//
+export const getHighQualityPlaylists = async (params) => {
+  return request({
+     url: '/top/playlist/highquality',
+     params: withCookie({cat: params?.cat || '全部', limit: params?.limit || 30, before: params?.before })
+  }).then((res) => res.data)
+};
+
+//获取排行榜
+export const getTopListDetail = async (params) => {
+  return request({
+    url: '/toplist/detail',
+    params,
+  }).then((res) => res.data)
+}
