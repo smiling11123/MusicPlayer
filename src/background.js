@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, screen } = require('electron/main')
+const { app, BrowserWindow, ipcMain, globalShortcut, screen, protocol } = require('electron/main')
 const path = require('node:path')
 const generateConfig = require('../net/generateConfig')
+const { initLocalMusic, closeLocalMusic } = require('./electron/localMusic')
 
 let mainWindow = null
 let lyricWindow = null
@@ -19,7 +20,9 @@ const createWindow = () => {
       backgroundThrottling: false,
     },
   })
-
+  mainWindow.webContents.session.setProxy({
+    mode: 'direct',
+  })
   if (app.isPackaged) {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   } else {
@@ -211,6 +214,19 @@ app.whenReady().then(async () => {
     }
   }
 
+  // 初始化本地音乐模块
+  initLocalMusic()
+
+  // 注册 local-resource 协议用于播放本地文件
+  protocol.registerFileProtocol('local-resource', (request, callback) => {
+    let filePath = decodeURIComponent(request.url.replace('local-resource://', ''))
+    // Windows 路径处理: 如果是类似 D/path 的格式,恢复为 D:/path
+    if (/^[A-Za-z]\//.test(filePath)) {
+      filePath = filePath[0] + ':' + filePath.slice(1)
+    }
+    callback({ path: filePath })
+  })
+
   await createWindow()
   initAutoUpdater() // 初始化自动更新
   RegisterGlobalShortCut()
@@ -223,6 +239,7 @@ app.whenReady().then(async () => {
 })
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
+  closeLocalMusic() // 关闭本地音乐数据库
 })
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

@@ -237,7 +237,7 @@ const addToPlaylist = async (pid: number, songId: number) => {
 const playSong = async (song: SongItem) => {
   await player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
   player.nextSongUrl = null
-  player.playcurrentSong({ firstId: song.id })
+  player.playcurrentSong(song.id)
 }
 const goToAllSongs = () => router.push({ name: 'WholeNewSongs' })
 const TurnIn = (artistid: number) => router.push({ name: 'artist', params: { id: artistid } })
@@ -441,7 +441,7 @@ $menu-hover: #3a3a3a;
   top: 100%;
   right: 0;
   width: 160px;
-  background-color: rgb($menu-bg,0.6);
+  background-color: rgb($menu-bg, 0.6);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   padding: 6px;
@@ -450,14 +450,14 @@ $menu-hover: #3a3a3a;
   border: 1px solid rgba(255, 255, 255, 0.05);
   overflow: visible !important;
 
-   /* 关键点 2: 开启毛玻璃模糊效果 */
-  backdrop-filter: blur(20px) saturate(180%); 
+  /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  
+
   /* 开启硬件加速 */
-  transform: translateZ(0); 
+  transform: translateZ(0);
   will-change: transform;
-  
+
   /* 可选：添加细微的边框线增强层次感 */
   transition: background 0.3s ease;
 }
@@ -516,21 +516,21 @@ $menu-hover: #3a3a3a;
   left: 100%;
   margin-left: 8px;
   width: 180px;
-  background-color: rgb($menu-bg,0.9);
+  background-color: rgb($menu-bg, 0.9);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.05);
   z-index: 101;
   padding: 6px;
-  
-   /* 关键点 2: 开启毛玻璃模糊效果 */
-  backdrop-filter: blur(20px) saturate(180%); 
+
+  /* 关键点 2: 开启毛玻璃模糊效果 */
+  backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  
+
   /* 开启硬件加速 */
-  transform: translateZ(0); 
+  transform: translateZ(0);
   will-change: transform;
-  
+
   /* 可选：添加细微的边框线增强层次感 */
   transition: background 0.3s ease;
 }

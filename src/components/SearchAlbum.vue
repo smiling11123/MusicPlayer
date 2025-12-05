@@ -48,7 +48,7 @@
         <div v-for="(page, pi) in pages" :key="pi" class="slide">
           <div v-for="(item, idx) in page" :key="item.id" class="hq-item">
             <div class="hq-card" @click="TurnIn(item)">
-              <img :src="item.image || null " alt="" class="hq-img" loading="lazy" />
+              <img :src="item.image || null" alt="" class="hq-img" loading="lazy" />
               <button class="play-btn" @click.stop="play(item)">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                   <path d="M8 5v14l11-7z" />
@@ -57,7 +57,7 @@
             </div>
 
             <div class="meta">
-              <div class="meta-title">{{ item.title  || null }}</div>
+              <div class="meta-title">{{ item.title || null }}</div>
             </div>
           </div>
 
@@ -201,7 +201,7 @@ async function play(item: Item) {
     console.log(typeof item.id)
     // 注意：以对象形式传参（避免 toFormData 报错）
     const idRes: any = await MusicIdList({ id: item.id })
-    
+
     console.log('MusicIdList response:', idRes)
 
     // 从响应中提取 id 列表（根据你的后端结构调整）
@@ -225,9 +225,7 @@ async function play(item: Item) {
     const firstId = idRes[0].id
     player.nextSongUrl = null
     // 调用播放（如果 store.playcurrentSong 支持传 url，可直接传；否则按你现有逻辑处理）
-    await player.playcurrentSong({
-      firstId,
-    })
+    await player.playcurrentSong(firstId)
     player.loadPlaylistData()
     console.log('isplaying', player.isplaying)
   } catch (err) {

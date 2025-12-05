@@ -25,7 +25,91 @@ declare global {
     onAutoUpdaterMessage: (
       callback: (event: any, data: { message: string; data: any }) => void,
     ) => void
+
+    // Local Music
+    openMusicFiles: () => Promise<{ canceled: boolean; filePaths: string[] }>
+    openMusicFolder: () => Promise<{ canceled: boolean; folderPath: string | null }>
+    scanFolder: (folder: string) => Promise<string[]>
+    getMusicTags: (path: string) => Promise<LocalSong>
+    readMusicCover: (path: string) => Promise<string | null>
+    addLocalSong: (
+      song: LocalSong,
+    ) => Promise<{ success: boolean; id?: string; error?: string; message?: string }>
+    addLocalSongs: (
+      songs: LocalSong[],
+    ) => Promise<{ success: boolean; addedCount?: number; error?: string }>
+    getAllLocalSongs: () => Promise<{ success: boolean; songs: LocalSong[]; error?: string }>
+    getLocalSongById: (
+      id: string,
+    ) => Promise<{ success: boolean; song?: LocalSong; error?: string }>
+    getPlaylistSongs: (
+      id: string,
+    ) => Promise<{ success: boolean; songs?: LocalSong[]; error?: string }>
+    getLocalByIds: (
+      ids: string[],
+    ) => Promise<{ success: boolean; songs: LocalSong[]; error?: string }>
+    deleteLocalSong: (id: string) => Promise<{ success: boolean; error?: string }>
+    deleteLocalSongs: (
+      ids: string[],
+    ) => Promise<{ success: boolean; deletedCount?: number; error?: string }>
+    checkLocalFileExists: (path: string) => Promise<boolean>
+    searchLocalSongs: (
+      keyword: string,
+    ) => Promise<{ success: boolean; songs: LocalSong[]; error?: string }>
+    getLocalSongCount: () => Promise<{ success: boolean; count: number; error?: string }>
+    getLocalFileUrl: (
+      path: string,
+    ) => Promise<{ success: boolean; url?: string; error?: string; message?: string }>
+    onLocalFileChange: (
+      callback: (event: any, data: { type: string; path: string }) => void,
+    ) => void
+    removeLocalFileChangeListener: (
+      callback: (event: any, data: { type: string; path: string }) => void,
+    ) => void
+    updateLocalSongMatchInfo: (data: {
+      id: string
+      neteaseId?: number
+      coverUrl?: string
+      artist?: string
+      album?: string
+      title?: string
+    }) => Promise<{ success: boolean; error?: string }>
+
+    // Local Playlist Methods
+    getAllLocalPlaylists: () => Promise<{ success: boolean; playlists: any[]; error?: string }>
+    getLocalPlaylistSongs: (
+      playlistId: string,
+    ) => Promise<{ success: boolean; songs: LocalSong[]; error?: string }>
+    getSongCountByList: (
+      playlistId: string,
+    ) => Promise<{ success: boolean; songs: LocalSong[]; error?: string }>
+    addSongToLocalPlaylist: (data: {
+      playlistId: string
+      songId: string
+    }) => Promise<{ success: boolean; error?: string }>
+    removeSongFromLocalPlaylist: (data: {
+      playlistId: string
+      songId: string
+    }) => Promise<{ success: boolean; error?: string }>
+    createLocalPlaylist: (
+      name: string,
+    ) => Promise<{ success: boolean; id?: string; error?: string }>
+    deleteLocalPlaylist: (id: string) => Promise<{ success: boolean; error?: string }>
     // 如需更多方法，按上面格式继续添加
+  }
+
+  interface LocalSong {
+    id: string
+    md5: string
+    path: string
+    title: string
+    artist: string
+    album: string
+    duration: number
+    cover: string | null
+    neteaseId?: number
+    coverUrl?: string
+    importAt?: number
   }
 
   interface Window {

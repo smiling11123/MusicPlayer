@@ -53,9 +53,14 @@ export const Player = defineStore(
     const isplaying = ref(false) // 播放状态
     const playnormal = ref(true)
     const playFM = ref(false)
-    const playlist = ref<number[]>([]) // 播放列表
+    const playlist = ref<(number | string)[]>([]) // 播放列表 (支持网易云ID和本地歌曲ID)
     const playmodel = ref('')
-    const currentSong = ref<number | null>(null) // 当前播放的歌曲
+    const currentSong = ref<number | string | null>(null) // 当前播放的歌曲
+
+    // 判断是否为本地歌曲
+    const isLocalSong = (id: number | string | null): boolean => {
+      return typeof id === 'string' && id.startsWith('local_')
+    }
     const currentSongUrl = ref<string | null>(null)
     const currentSongTime = ref<number>(0) //上次播放位置
     const currentSongLyric = ref<string>(null)
@@ -121,6 +126,13 @@ export const Player = defineStore(
     // 监听错误
     audio.addEventListener('error', async (e) => {
       if (!isSwitch.value) {
+        if(isLocalSong(currentSong.value)){
+          audio.src = currentSongUrl.value.toString()
+          await audio.load()
+          audio.currentTime = currentSongTime.value
+          audio.play()
+          return
+        }
         console.error('音频加载错误:', e)
         const reloadurl = ref(null)
         const reloadurlUnblock = ref(null)
@@ -151,6 +163,13 @@ export const Player = defineStore(
     const play = async () => {
       if (currentSong.value && isplaying.value === false) {
         isplaying.value = true
+        if(isLocalSong(currentSong.value)){
+          audio.src = currentSongUrl.value.toString()
+          await audio.load()
+          audio.currentTime = currentSongTime.value
+          audio.play()
+          return
+        }
         const urls = await MusicUrl({ id: currentSong.value })
         const url = currentSongUrl.value ?? urls[0].url
         audio.src = url
@@ -162,14 +181,98 @@ export const Player = defineStore(
     }
 
     //采用预加载下一首歌曲来降低请求带来的延迟 , ispre: 上一首或者切换播放列表（不是执行下一首的操作）
-    const playcurrentSong = async (input, ispre = false) => {
+    const playcurrentSong = async (input: number | string, ispre = false) => {
       isSwitch.value = true // 切换锁
       if (audio) {
         audio.src = null
         audio.pause()
       }
 
-      const id = input.firstId || input
+      const id = (input as any).firstId || input
+
+      // 检查是否为本地歌曲
+      if (isLocalSong(id)) {
+        // 本地歌曲播放逻辑
+        try {
+          const localSongRes = await window.electronAPI?.getLocalSongById(id)
+          if (!localSongRes?.success || !localSongRes.song) {
+            console.error('获取本地歌曲失败:', localSongRes?.error)
+            isSwitch.value = false
+            return
+          }
+
+          const localSong = localSongRes.song
+
+          // 获取本地文件URL
+          const urlRes = await window.electronAPI?.getLocalFileUrl(localSong.path)
+          if (!urlRes?.success || !urlRes.url) {
+            console.error('获取本地文件URL失败:', urlRes?.error)
+            isSwitch.value = false
+            return
+          }
+
+          // 使用 local-resource 协议
+          const fileUrl = `local-resource://${localSong.path.replace(/\\/g, '/')}`
+
+          isplaying.value = true
+          currentSongUrl.value = fileUrl
+
+          // 尝试获取歌词 (如果有匹配的网易云ID)
+          if (localSong.neteaseId) {
+            try {
+              const lyricRes = await GetMusicLyric(localSong.neteaseId)
+              const lrcRes = await GetWordMusicLyric(localSong.neteaseId)
+
+              currentSongLyric.value = lyricRes.lrc?.lyric || null
+              currentSongTLyric.value = lyricRes.tlyric?.lyric || null
+              currentSongYrc.value = lrcRes.yrc?.lyric || null
+              currentSongTYrc.value = lrcRes.ytlrc?.lyric || null
+              currentSongRoMaYrc.value = lrcRes.romalrc?.lyric || null
+            } catch (e) {
+              console.warn('获取本地歌曲歌词失败:', e)
+              currentSongLyric.value = null
+              currentSongTLyric.value = null
+              currentSongYrc.value = null
+              currentSongTYrc.value = null
+              currentSongRoMaYrc.value = null
+            }
+          } else {
+            currentSongLyric.value = null // 本地歌曲暂无歌词
+            currentSongTLyric.value = null
+            currentSongYrc.value = null
+            currentSongTYrc.value = null
+            currentSongRoMaYrc.value = null
+          }
+
+          currentSongDetail.value = {
+            id: localSong.id as any, // 本地歌曲ID为字符串
+            name: localSong.title,
+            artists: [{ id: 0, name: localSong.artist }],
+            cover: localSong.coverUrl || localSong.cover || '',
+            duration: Math.floor(localSong.duration || 0),
+            album: localSong.album,
+            fee: 0,
+          }
+
+          currentSong.value = id
+          audio.src = fileUrl
+          currentSongTime.value = 0
+          audio.currentTime = 0
+          await audio.load()
+          await audio.play()
+          isSwitch.value = false
+          if(!isLocalSong(playlist.value[currentSongIndex.value + 1])){
+            preload()
+          }
+          return
+        } catch (error) {
+          console.error('播放本地歌曲失败:', error)
+          isSwitch.value = false
+          return
+        }
+      }
+
+      // 原有的网易云歌曲播放逻辑
       const unblockurls = ref(null)
       const canUsePreload = nextSongUrl.value && !ispre //
       const urls = ref(null)
@@ -234,8 +337,8 @@ export const Player = defineStore(
 
       currentSong.value = id
       audio.src = url // 设置音频源
-      //currentSongTime.value = 0 //audio.currentTime
-      //audio.currentTime = 0
+      currentSongTime.value = 0 //audio.currentTime
+      audio.currentTime = 0
       //setupAudioListener() // 设置音频监听器
       await audio.load()
       await audio.play() // 播放音频
@@ -279,45 +382,102 @@ export const Player = defineStore(
     //加载数据，根据playlist中的歌曲Id把信息加入播放列表（currentSonglist）
     const loadPlaylistData = async () => {
       try {
-        const songIds = playlist.value // 假设是 number[]
+        const songIds = playlist.value
         if (songIds.length === 0) {
           currentSongList.value = []
           return
         }
-        const results = await Promise.all(
-          songIds.map((id) =>
-            GetMusicDetail({ ids: id }) // 单个请求
-              .then((res) => res) // 提取数据
-              .catch((err) => {
-                console.error(`歌曲 ${id} 加载失败:`, err)
-                return null // 失败时返回null
-              }),
-          ),
-        )
-        currentSongList.value = results
-          .filter(Boolean) // 移除null
-          .map((song) => ({
-            id: song.songs[0].id,
-            name: song.songs[0].name,
-            album: song.songs[0].al?.name || '未知专辑',
-            artists: song.songs[0].ar.map((ar: any) => ({ id: ar.id, name: ar.name })),
-            duration: song.songs[0].dt ? Math.floor(song.songs[0].dt / 1000) : 0,
-            cover: song.songs[0].al?.picUrl || '',
-          }))
+
+        const localIds: string[] = []
+        const onlineIds: number[] = []
+        const idMap = new Map<string | number, SongItem>()
+
+        // 分离本地和在线歌曲ID
+        songIds.forEach((id) => {
+          if (isLocalSong(id)) {
+            localIds.push(id as string)
+          } else {
+            onlineIds.push(id as number)
+          }
+        })
+
+        // 并行获取数据
+        const promises = []
+
+        // 1. 获取在线歌曲详情
+        if (onlineIds.length > 0) {
+          // 网易云API通常支持批量获取，这里为了简单还是并发请求，或者优化为批量请求
+          // 注意：GetMusicDetail 支持 ids 参数为逗号分隔字符串或数组
+          // 如果 GetMusicDetail 支持批量:
+          const onlinePromise = GetMusicDetail({ ids: onlineIds.join(',') })
+            .then((res) => {
+              if (res && res.songs) {
+                res.songs.forEach((song: any) => {
+                  idMap.set(song.id, {
+                    id: song.id,
+                    name: song.name,
+                    album: song.al?.name || '未知专辑',
+                    artists: song.ar.map((ar: any) => ({ id: ar.id, name: ar.name })),
+                    duration: song.dt ? Math.floor(song.dt / 1000) : 0,
+                    cover: song.al?.picUrl || '',
+                    fee: song.fee,
+                  })
+                })
+              }
+            })
+            .catch((err) => console.error('获取在线歌曲详情失败:', err))
+          promises.push(onlinePromise)
+        }
+
+        // 2. 获取本地歌曲详情
+        if (localIds.length > 0) {
+          const localPromise = window.electronAPI
+            ?.getLocalByIds(localIds)
+            .then((res) => {
+              if (res && res.success && res.songs) {
+                res.songs.forEach((song) => {
+                  idMap.set(song.id, {
+                    id: song.id as any,
+                    name: song.title,
+                    album: song.album || '未知专辑',
+                    artists: [{ id: 0, name: song.artist }],
+                    duration: Math.floor(song.duration || 0),
+                    cover: song.coverUrl || song.cover || '',
+                    fee: 0,
+                  })
+                })
+              }
+            })
+            .catch((err) => console.error('获取本地歌曲详情失败:', err))
+          promises.push(localPromise)
+        }
+
+        await Promise.all(promises)
+
+        // 按原始顺序重建列表
+        currentSongList.value = songIds
+          .map((id) => idMap.get(id))
+          .filter((item): item is SongItem => !!item)
       } catch (error) {
         console.error('加载歌曲失败:', error)
-      } finally {
       }
     }
 
-    const addSongToPlaylist = async (songid, next) => {
+    const addSongToPlaylist = async (songid: number | string, next: number) => {
       if (playlist.value.includes(songid)) {
         return
         //如果歌曲已经存在就不再添加
       }
       nextSongUrl.value = null
       await playlist.value.splice(next, 0, songid) // 添加歌曲到播放列表
-      const res = await GetMusicDetail({ ids: songid })
+
+      // 本地歌曲不需要从API获取详情
+      if (isLocalSong(songid)) {
+        preload()
+        return
+      }
+
+      const res = await GetMusicDetail({ ids: songid as number })
       const song = res.songs[0]
       currentSongList.value.splice(next, 0, {
         id: song.id,
@@ -329,10 +489,10 @@ export const Player = defineStore(
       })
       preload()
     }
-    const addWholePlaylist = (songs) => {
+    const addWholePlaylist = (songs: (number | string)[]) => {
       playlist.value = songs // 替换整个播放列表
     }
-    const removeSongFromPlaylist = (songId) => {
+    const removeSongFromPlaylist = (songId: number | string) => {
       const wasPlaying = currentSong.value === songId // 检查是否是当前播放的歌曲
       playlist.value = playlist.value.filter((song) => song !== songId) // 从播放列表中移除歌曲
       currentSongList.value = currentSongList.value.filter((song) => song.id !== songId)
@@ -376,7 +536,7 @@ export const Player = defineStore(
       console.log(playlist.value.length)
       console.log(currentSongList.value.length)
       console.log(currentSongIndex.value)
-      const song = ref<number>(null)
+      const song = ref<number | string>(null)
       const currentIndex = currentSongIndex.value === -1 ? 0 : currentSongIndex.value
       const nextIndex = (currentIndex + 1) % playlist.value.length // 计算下一首歌曲索引
       song.value = playlist.value[nextIndex]
@@ -508,7 +668,7 @@ export const Player = defineStore(
         // 如果有失败的歌曲，从 playlist 中移除
         if (validSongs.length < filteredIds.length) {
           const failedIds = filteredIds.filter((id) => !validSongs.some((song) => song.id === id))
-          playlist.value = playlist.value.filter((id) => !failedIds.includes(id))
+          playlist.value = playlist.value.filter((id) => !failedIds.includes(id as number))
           console.warn(`部分歌曲添加失败，已跳过:`, failedIds)
         }
 
@@ -537,6 +697,7 @@ export const Player = defineStore(
       currentSongRoMaYrc,
       currentSongUrl,
       useCookie,
+      isLocalSong,
       currentSongList,
       currentSongIndex,
       currentSongTime,
@@ -555,6 +716,7 @@ export const Player = defineStore(
       addSongsToPlaylist,
       randomplaymodel,
       onlyoneplaymodel,
+      
     }
   },
   {

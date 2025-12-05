@@ -159,9 +159,11 @@
 import { GetMusicComment, GetMusicDetail, SendComment } from '@/api/GetMusic' // 引入 SendComment
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-
+import { Player } from '@/stores'
+import { getSongById } from '@/electron/db'
 const route = useRoute()
-
+const player = Player()
+const songid = ref(null)
 // 接口定义
 export interface CommentUser {
   userId: number
@@ -183,10 +185,22 @@ export interface CommentItem {
 }
 
 // 状态定义
-const songid = computed(() => {
-  const id = route.params.id
-  return Array.isArray(id) ? Number(id[0]) : Number(id)
-})
+watch(
+  () => route.params.id,
+  async (newid) => {
+    if (!newid) return
+    const rawId = Array.isArray(newid) ? newid[0] : newid
+
+    if (player.isLocalSong(rawId)) {
+      const song = await window.electronAPI.getLocalSongById(rawId)
+      songid.value = song.song?.neteaseId
+    } else {
+      songid.value = rawId
+    }
+    console.log(songid.value)
+  },
+  { immediate: true },
+)
 
 const comments = ref<CommentItem[]>([])
 const hotComments = ref<CommentItem[]>([])
@@ -209,6 +223,7 @@ const inputRef = ref<HTMLInputElement | null>(null)
 // 获取歌曲详情
 const fetchSongDetail = async () => {
   const id = songid.value
+  console.log('songid', songid)
   if (!id) return
   try {
     const res = await GetMusicDetail({ ids: id })

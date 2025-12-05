@@ -232,7 +232,7 @@ const playDaily = async () => {
   // 1. 添加到列表
   await player.addWholePlaylist(ids)
   // 2. 播放第一首
-  await player.playcurrentSong({ firstId })
+  await player.playcurrentSong(firstId)
   player.loadPlaylistData()
 }
 
@@ -262,7 +262,7 @@ const startFmPlayback = async () => {
   // 确保播放器里有歌
   player.addWholePlaylist(ids)
 
-  await player.playcurrentSong({ firstId })
+  await player.playcurrentSong(firstId)
   player.loadPlaylistData()
   player.isplaying = true
 }

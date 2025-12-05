@@ -50,7 +50,7 @@
             <div class="hq-card" @click="TurnIn(item)">
               <img :src="item.image" alt="" class="hq-img" loading="lazy" />
 
-              <div class="hq-badge" >
+              <div class="hq-badge">
                 {{ item.badgeText || '每日推荐' }}
               </div>
 
@@ -194,7 +194,7 @@ async function play(item: Item) {
     console.log(typeof item.id)
     // 注意：以对象形式传参（避免 toFormData 报错）
     const idRes: any = await MusicIdList({ id: item.id })
-    
+
     console.log('MusicIdList response:', idRes)
 
     // 从响应中提取 id 列表（根据你的后端结构调整）
@@ -218,9 +218,7 @@ async function play(item: Item) {
     const firstId = idRes[0].id
     player.nextSongUrl = null
     // 调用播放（如果 store.playcurrentSong 支持传 url，可直接传；否则按你现有逻辑处理）
-    await player.playcurrentSong({
-      firstId,
-    })
+    await player.playcurrentSong(firstId)
     player.loadPlaylistData()
     console.log('isplaying', player.isplaying)
   } catch (err) {

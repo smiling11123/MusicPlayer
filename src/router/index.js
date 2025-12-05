@@ -15,6 +15,7 @@ import WholeMusicHub from '@/components/WholeMusicHub.vue'
 import WholeMusicHubRank from '@/components/WholeMusicHubRank.vue'
 import Comment from '@/components/Comment.vue'
 import WholeMusicHubArtist from '@/components/WholeMusicHubArtist.vue'
+import LocalMusic from '@/components/LocalMusic.vue'
 const routes = [
   {
     path: '/',
@@ -118,6 +119,11 @@ const routes = [
     path: '/SearchResult/video/:id',
     name: 'searchvideo',
     component: Video,
+  },
+  {
+    path: '/LocalMusic/:id?',
+    name: 'LocalMusic',
+    component: LocalMusic,
   },
 ]
 

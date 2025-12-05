@@ -38,7 +38,7 @@
 
     <div class="list-wrapper">
       <ul class="list">
-        <li class="list-item" @click="router.push({ name: 'localMusic' })">
+        <li class="list-item" @click="router.push({ name: 'LocalMusic', params: { id: 'whole' } })">
           <div class="item-content">
             <div class="cover-container">
               <div class="local-icon-placeholder">
@@ -71,12 +71,6 @@
         >
           <div class="item-content">
             <div class="cover-container">
-              <img
-                
-                onerror="this.style.display='none'"
-                alt="封面"
-                class="cover-img"
-              />
               <div class="default-cover" v-if="true">
                 <span class="cover-text">{{ list.name.slice(0, 1) }}</span>
               </div>
@@ -98,7 +92,7 @@
             </div>
 
             <div class="right-actions">
-              <button class="action-btn delete" @click.stop="deleteLocalPlaylist(list.id)">
+              <button class="action-btn delete" @click.stop="openDeleteModal(list.id)">
                 <svg
                   width="18"
                   height="18"
@@ -206,6 +200,20 @@
       </div>
     </div>
   </div>
+
+  <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+    <div class="modal-content">
+      <h3>删除确认</h3>
+      <div class="modal-tip">
+        确定要删除该本地歌单吗？<br />
+        <span class="sub-tip">此操作无法恢复，歌单内的歌曲文件不会被删除。</span>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" @click="closeDeleteModal">取消</button>
+        <button class="btn-delete" @click="confirmDeleteAction">删除</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -226,9 +234,8 @@ interface Musiclist {
   trackCount?: number
 }
 
-// 本地歌单类型
 interface LocalPlaylist {
-  id: string // 使用 uuid 或时间戳字符串
+  id: string
   name: string
   trackCount: number
   createTime: number
@@ -237,9 +244,15 @@ interface LocalPlaylist {
 // --- 状态 ---
 const usermusiclist = ref<Musiclist[]>([])
 const localPlaylists = ref<LocalPlaylist[]>([])
+
+// 新建歌单状态
 const showModal = ref(false)
 const newPlaylistName = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
+
+// 新增：删除歌单状态
+const showDeleteModal = ref(false)
+const pendingDeleteId = ref<string | null>(null)
 
 // --- 工具函数 ---
 function truncateText(text: string, maxLength: number): string {
@@ -255,7 +268,8 @@ function formatPlayCount(count: number): string {
 }
 
 function formatDate(timestamp: number) {
-  const date = new Date(timestamp)
+  const time = timestamp < 10000000000 ? timestamp * 1000 : timestamp
+  const date = new Date(time)
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
 }
 
@@ -264,12 +278,9 @@ const goToPlaylist = (listid: number) => {
   router.push({ name: 'musiclist', params: { id: listid } })
 }
 
-// 跳转到本地歌单详情（假设你有这个路由，参数传 local_xxx）
 const goToLocalPlaylist = (id: string) => {
-  // 这里你可以定义一个新的路由 name: 'localPlaylist'
-  // 或者复用 musiclist，在页面内判断 id 是否以 'local_' 开头
   console.log('跳转本地歌单:', id)
-  router.push({ name: 'localPlaylist', params: { id: id } })
+  router.push({ name: 'LocalMusic', params: { id: id } })
 }
 
 const showActions = (list: Musiclist) => {
@@ -278,20 +289,24 @@ const showActions = (list: Musiclist) => {
 
 // --- 本地歌单逻辑 ---
 
-// 加载本地歌单
-const loadLocalPlaylists = () => {
-  const stored = localStorage.getItem('my_local_playlists')
-  if (stored) {
-    try {
-      localPlaylists.value = JSON.parse(stored)
-    } catch (e) {
-      console.error('读取本地歌单失败', e)
-      localPlaylists.value = []
+const loadLocalPlaylists = async () => {
+  try {
+    const res = await window.electronAPI?.getAllLocalPlaylists()
+    if (res && res.success) {
+      localPlaylists.value = res.playlists.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        trackCount: p.trackCount,
+        createTime: p.createdAt,
+      }))
     }
+  } catch (e) {
+    console.error('读取本地歌单失败', e)
+    localPlaylists.value = []
   }
 }
 
-// 打开弹窗
+// --- 新建弹窗逻辑 ---
 const openCreateModal = () => {
   showModal.value = true
   newPlaylistName.value = ''
@@ -300,42 +315,59 @@ const openCreateModal = () => {
   })
 }
 
-// 关闭弹窗
 const closeCreateModal = () => {
   showModal.value = false
 }
 
-// 确认创建
-const confirmCreate = () => {
+const confirmCreate = async () => {
   if (!newPlaylistName.value.trim()) return
-
-  const newList: LocalPlaylist = {
-    id: `local_${Date.now()}`, // 生成唯一ID
-    name: newPlaylistName.value.trim(),
-    trackCount: 0,
-    createTime: Date.now(),
-  }
-
-  localPlaylists.value.unshift(newList) // 添加到头部
-  saveLocalPlaylists()
-  closeCreateModal()
-}
-
-// 删除本地歌单
-const deleteLocalPlaylist = (id: string) => {
-  if (confirm('确定要删除这个本地歌单吗？')) {
-    localPlaylists.value = localPlaylists.value.filter((list) => list.id !== id)
-    saveLocalPlaylists()
+  try {
+    const res = await window.electronAPI?.createLocalPlaylist(newPlaylistName.value.trim())
+    if (res && res.success) {
+      await loadLocalPlaylists()
+      closeCreateModal()
+    } else {
+      console.error('创建歌单失败:', res?.error)
+    }
+  } catch (e) {
+    console.error('创建歌单出错:', e)
   }
 }
 
-// 保存到 localStorage
-const saveLocalPlaylists = () => {
-  localStorage.setItem('my_local_playlists', JSON.stringify(localPlaylists.value))
+// --- 新增：删除弹窗逻辑 ---
+
+// 1. 打开删除确认框
+const openDeleteModal = (id: string) => {
+  pendingDeleteId.value = id
+  showDeleteModal.value = true
+}
+
+// 2. 关闭删除确认框
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  pendingDeleteId.value = null
+}
+
+// 3. 执行删除操作
+const confirmDeleteAction = async () => {
+  if (!pendingDeleteId.value) return
+
+  try {
+    const res = await window.electronAPI?.deleteLocalPlaylist(pendingDeleteId.value)
+    if (res && res.success) {
+      await loadLocalPlaylists() // 刷新列表
+    } else {
+      console.error('删除歌单失败:', res?.error)
+    }
+  } catch (e) {
+    console.error('删除歌单出错:', e)
+  } finally {
+    closeDeleteModal() // 无论成功与否都关闭弹窗
+  }
 }
 
 onMounted(async () => {
-  loadLocalPlaylists() // 加载本地歌单
+  loadLocalPlaylists()
 
   try {
     const userplaylist = await GetUserMusicList(UserInfo.userId)
@@ -649,8 +681,8 @@ onMounted(async () => {
 
     .tag-local {
       font-size: 10px;
-      border: 1px solid #1c1c1c;
-      color: #1c1c1c;
+      border: 1px solid #fff;
+      color: #fff;
       padding: 0 4px;
       border-radius: 3px;
       height: 16px;
@@ -747,6 +779,21 @@ onMounted(async () => {
     text-align: center;
   }
 
+  // 新增：Modal 提示文字样式
+  .modal-tip {
+    color: #e0e0e0;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    .sub-tip {
+      display: block;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #888;
+    }
+  }
+
   input {
     width: 100%;
     box-sizing: border-box;
@@ -797,6 +844,15 @@ onMounted(async () => {
           background: #333;
           color: #666;
           cursor: not-allowed;
+        }
+      }
+
+      // 新增：红色删除按钮
+      &.btn-delete {
+        background: #ff4d4f;
+        color: #fff;
+        &:hover {
+          background: #ff7875;
         }
       }
     }

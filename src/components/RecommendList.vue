@@ -50,7 +50,7 @@
             <div class="hq-card" @click="TurnIn(item)">
               <img :src="item.image" alt="" class="hq-img" loading="lazy" />
 
-              <div class="hq-badge" >
+              <div class="hq-badge">
                 {{ item.badgeText || '每日推荐' }}
               </div>
 
@@ -217,9 +217,7 @@ async function play(item: Item) {
     const firstId = idRes[0].id
     player.nextSongUrl = null
     // 调用播放（如果 store.playcurrentSong 支持传 url，可直接传；否则按你现有逻辑处理）
-    await player.playcurrentSong({
-      firstId,
-    })
+    await player.playcurrentSong(firstId)
     // 取第一首，先获取可播放 url
     player.loadPlaylistData()
     console.log('isplaying', player.isplaying)

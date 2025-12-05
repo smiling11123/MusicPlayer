@@ -211,7 +211,7 @@ const playSong = async (song: SongItem) => {
   player.playnormal = true
   player.nextSongUrl = null
   await player.addSongToPlaylist(song.id, player.currentSongIndex + 1)
-  player.playcurrentSong({ firstId: song.id })
+  player.playcurrentSong(song.id)
 }
 
 const goToAllSongs = () => router.push({ name: 'WholeSearchSongs' })
@@ -287,7 +287,7 @@ $hover-bg: rgba(255, 255, 255, 0.1);
 $text-main: #ffffff;
 $text-sub: #7d7d7d;
 // 定义基础颜色变量
-$menu-bg:#1c1c1e;
+$menu-bg: #1c1c1e;
 $menu-hover: #3a3a3a;
 
 .song-rec-container {

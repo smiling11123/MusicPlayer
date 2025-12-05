@@ -50,7 +50,7 @@
             <div class="hq-card" @click="TurnIn(item)">
               <img :src="item.image" alt="" class="hq-img" loading="lazy" />
 
-              <div class="hq-badge" >
+              <div class="hq-badge">
                 {{ item.badgeText || '每日推荐' }}
               </div>
 
@@ -218,9 +218,7 @@ async function play(item: Item) {
 
     // 把标准化的 id 列表加入播放器
     await player.addWholePlaylist(ids)
-    await player.playcurrentSong({
-      firstId,
-    })
+    await player.playcurrentSong(firstId)
     player.loadPlaylistData()
     console.log('isplaying', player.isplaying)
   } catch (err) {
